@@ -1,2 +1,2 @@
-pandas_patch
+pandas-patch
 ============
