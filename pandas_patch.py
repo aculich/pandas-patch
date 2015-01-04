@@ -33,3 +33,9 @@ pd.DataFrame.narowcount = narowcount
 # test 
 test.nacolcount()
 test.narowcount()
+
+def manymissing(self,a):
+    """ identify columns of a dataframe with many missing values ( >= a) """
+    df = self.nacolcount()
+    return df[df['Napercentage'] >= a].index
+    
