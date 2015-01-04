@@ -15,11 +15,17 @@ test = DataFrame(read_csv('lc_test.csv'))
 
 def nacolcount(self):
     """ count the number of missing values per columns """
-    return self.apply(lambda x: sum(pd.isnull(x)),axis = 0 )
+    Serie =  self.apply(lambda x: sum(pd.isnull(x)),axis = 0)
+    df =  DataFrame(Serie,columns = ['Nanumber'])
+    df['Napercentage'] = df['Nanumber']/(self.shape[0])
+    return df
     
 def narowcount(self):
     """ count the number of missing values per rows """
-    return self.apply(lambda x: sum(pd.isnull(x)),axis = 1 )
+    Serie = self.apply(lambda x: sum(pd.isnull(x)),axis = 1 )   
+    df =  DataFrame(Serie,columns = ['Nanumber'])
+    df['Napercentage'] = df['Nanumber']/(self.shape[1])
+    return df
 
 pd.DataFrame.nacolcount = nacolcount
 pd.DataFrame.narowcount = narowcount
