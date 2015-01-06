@@ -5,15 +5,31 @@ Created on Sun Jan  4 00:34:33 2015
 @author: efourrier
 
 Purpose : the puropose of this modest patch is to create some new methods for
-the class Dataframe in order to simplify a data scientist life 
+the class Dataframe in order to simplify a data scientist life.
+The module is designed as a monkey patch so just import it before starting your 
+analysis
 """
+#########################################################
+# Import modules 
+#########################################################
+
 import pandas as pd 
 from pandas import DataFrame
 from pandas import read_csv
 
+#########################################################
+# Create a test dataframe 
+#########################################################
+
 test = DataFrame(read_csv('lc_test.csv'))
 test['na_col'] = np.nan
 test['constant_col'] = 'constant'
+test['duplicated_column'] = test.id
+
+#########################################################
+# Data cleaning and exploration helpers 
+#########################################################
+
 
 def nacolcount(self):
     """ count the number of missing values per columns """
@@ -50,4 +66,59 @@ def constantcol(self):
     
 pd.DataFrame.constantcol = constantcol
 test.constantcol()    
+
+def nrow(self):
+    """ return the number of rows """
+    return self.shape[0]
     
+def ncol(self):
+    """ return the number of cols """
+    return self.shape[1]
+
+pd.DataFrame.nrow = nrow
+test.nrow()
+pd.DataFrame.ncol = ncol
+test.ncol()
+
+def detectkey(self):
+    """ identify id or key columns """
+    df = self.apply(lambda x: len(x.unique()),axis = 0 )
+    return df[df == self.nrow()].index
+    
+pd.DataFrame.detectkey = detectkey
+test.detectkey()
+
+#def findupcol(self):
+#    """ find duplicated columns and return the result as a list of tuple """
+#    dup = self.T.duplicated 
+#    index_dup = dup[dup == True].index
+#    for col in index_dup:
+#        dup =test.apply(lambda x: (x == test.col))
+#        dup = dup[dup == True].T.dropna().T.columns
+#        tuple =  ()
+
+
+
+#########################################################
+# Data summary helpers 
+#########################################################
+def dfnum(self):
+    """ select columns with numeric type, the output is a list of columns  """
+    return self.columns[((self.dtypes == float)|(self.dtypes == int))]
+
+pd.DataFrame.dfnum = dfnum 
+test.dfnum()
+       
+def detailledsummary(self):
+    """ provide a more complete sumary than describe, it is using only numeric
+    value """
+    self = self[self.dfnum()]
+    func_list = [self.count(),self.min(), self.quantile(0.25),self.quantile(0.5),self.mean(),
+                 self.std(),self.mad(),self.skew(),self.kurt(),self.quantile(0.75),self.max()]
+    results = [f for f in func_list]
+    return DataFrame(results,index=['Count','Min','FirstQuartile',
+    'Median','Mean','Std','Mad','Skewness',
+    'Kurtosis','Thirdquartile','Max']).T
+                                      
+pd.DataFrame.detailledsummary = detailledsummary
+test.detailledsummary()    
