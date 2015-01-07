@@ -121,4 +121,25 @@ def detailledsummary(self):
     'Kurtosis','Thirdquartile','Max']).T
                                       
 pd.DataFrame.detailledsummary = detailledsummary
-test.detailledsummary()    
+test.detailledsummary()
+
+def groupsummarys(self,groupvar,measurevar):
+    """ provide a summary of measurevar groupby groupvar. measurevar and 
+    groupvar are list of column names """
+    functions = ['count','min','mean','median','std','max']
+    col = measurevar + groupvar 
+    df = self[col]
+    return df.groupby(groupvar).agg(functions)
+
+pd.DataFrame.groupsummarys = groupsummarys
+test1 = test.groupsummarys(['grade'],['fico_range_high'])
+
+def groupsummaryd(self,groupvar,measurevar):
+    """ provide a summary of measurevar groupby groupvar with describe helper.
+    measurevar and groupvar are list of column names """
+    col = measurevar + groupvar 
+    df = self[col]
+    return df.groupby(groupvar).describe()
+
+pd.DataFrame.groupsummaryd = groupsummaryd
+test.groupsummaryd(['grade'],['fico_range_high'])
