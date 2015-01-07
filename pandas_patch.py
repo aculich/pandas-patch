@@ -16,6 +16,9 @@ analysis
 import pandas as pd 
 from pandas import DataFrame
 from pandas import read_csv
+import scipy
+from scipy.stats import t
+import scikits.bootstrap as bootstrap
 
 #########################################################
 # Create a test dataframe 
@@ -48,7 +51,7 @@ def narowcount(self):
     df['Napercentage'] = df['Nanumber']/(self.shape[1])
     return df
 
-pd.DataFrame.nacolcount = nacolcount
+pd.DataFrame.narowcount = narowcount
 test.narowcount()
 
 def manymissing(self,a):
@@ -134,6 +137,10 @@ def groupsummarys(self,groupvar,measurevar):
 pd.DataFrame.groupsummarys = groupsummarys
 test1 = test.groupsummarys(['grade'],['fico_range_high'])
 
+# multiindex structure 
+test.groupsummarys(['grade','sub_grade'],['fico_range_high','dti'])
+
+
 def groupsummaryd(self,groupvar,measurevar):
     """ provide a summary of measurevar groupby groupvar with describe helper.
     measurevar and groupvar are list of column names """
@@ -143,3 +150,37 @@ def groupsummaryd(self,groupvar,measurevar):
 
 pd.DataFrame.groupsummaryd = groupsummaryd
 test.groupsummaryd(['grade'],['fico_range_high'])
+
+def groupsummarysc(self,groupvar,measurevar,confint=0.95,*arg):
+    """ provide a summary of measurevar groupby groupvar with student conf interval.
+    measurevar and groupvar are list of column names """
+    def se(x):
+        return x.std() / np.sqrt(len(x))
+ 
+    def student_ci(x):
+        return se(x) * scipy.stats.t.interval(confint, len(x) - 1,*arg)[1]
+    functions = ['count','min','mean',se,student_ci,'median','std','max']
+    col = measurevar + groupvar 
+    df = self[col]
+    return df.groupby(groupvar).agg(functions)
+
+pd.DataFrame.groupsummarysc = groupsummarysc
+test.groupsummarysc(['grade'],['fico_range_high'])
+
+def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,*arg):
+    """ provide a summary of measurevar groupby groupvar with bootstrap conf interval.
+    measurevar and groupvar are list of column names """
+    def ci_inf(x):
+        return bootstrap.ci(data=x, statfunction=scipy.mean, alpha = confint,
+                            n_samples = nsamples,*arg)[0]
+    def ci_up(x):
+        return bootstrap.ci(data=x, statfunction=scipy.mean, alpha = confint,
+                            n_samples = nsamples,*arg)[1]
+        
+    functions = ['count','min',ci_inf,'mean',ci_up,'median','std','max']
+    col = measurevar + groupvar 
+    df = self[col]
+    return df.groupby(groupvar).agg(functions)
+
+pd.DataFrame.groupsummarybc = groupsummarybc
+test.groupsummarybc(['grade'],['fico_range_high'])
