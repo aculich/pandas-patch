@@ -14,6 +14,7 @@ analysis
 #########################################################
 
 import pandas as pd 
+import numpy as np 
 from pandas import DataFrame
 from pandas import read_csv
 import scipy
@@ -66,6 +67,8 @@ def constantcol(self):
     """ identify constant columns """
     df = self.apply(lambda x: len(x.unique()),axis = 0 )
     return df[df == 1].index
+
+
     
 pd.DataFrame.constantcol = constantcol
 test.constantcol()    
@@ -91,16 +94,27 @@ def detectkey(self):
 pd.DataFrame.detectkey = detectkey
 test.detectkey()
 
-#def findupcol(self):
-#    """ find duplicated columns and return the result as a list of tuple """
-#    dup = self.T.duplicated 
-#    index_dup = dup[dup == True].index
-#    for col in index_dup:
-#        dup =test.apply(lambda x: (x == test.col))
-#        dup = dup[dup == True].T.dropna().T.columns
-#        tuple =  ()
+def findupcol(self):
+    """ find duplicated columns and return the result as a list of list
+    Function to correct , working but bad coding """
+    dup_index = self.T.duplicated() 
+    dup_columns = self.columns[dup_index]
+    l = []
+    for col in dup_columns:
+        index_temp = self.apply(lambda x: (x == self[col])).apply(lambda x:sum(x) == self.nrow())
+        temp = list(self.columns[index_temp])
+        l.append(temp)
+    return list(np.unique([col for col in l if col != [] ]))
 
+pd.DataFrame.findupcol = findupcol
+test.findupcol()
 
+def filterdupcol(self):
+    """ return a dataframe without duplicated columns """
+    return self.drop(self.columns[self.T.duplicated()],axis =1)
+pd.DataFrame.filterdupcol = filterdupcol
+test_wd = test.filterdupcol()
+test_wd.findupcol()
 
 #########################################################
 # Data summary helpers 
