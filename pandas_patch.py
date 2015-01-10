@@ -7,7 +7,8 @@ Created on Sun Jan  4 00:34:33 2015
 Purpose : the puropose of this modest patch is to create some new methods for
 the class Dataframe in order to simplify a data scientist life.
 The module is designed as a monkey patch so just import it before starting your 
-analysis
+analysis.
+It is providing multiple simple methods for the class dataframe 
 """
 #########################################################
 # Import modules 
@@ -171,10 +172,10 @@ pd.DataFrame.groupsummaryd = groupsummaryd
 test.groupsummaryd(['grade'],['fico_range_high'])
 
 def groupsummarysc(self,groupvar,measurevar,confint=0.95,addkey = True,
-                   cut = False, quantile = 5,is_group = False,*arg):
+                   cut = False, quantile = 5,is_bucket = False,*arg):
     """ provide a summary of measurevar groupby groupvar with student conf interval.
     measurevar and groupvar are list of column names
-    if you want group of the same size instead of quantile put is_group = True"""
+    if you want bucket of equal length instead of quantile put is_bucket = True """
     def se(x):
         return x.std() / np.sqrt(len(x))
  
@@ -195,11 +196,11 @@ pd.DataFrame.groupsummarysc = groupsummarysc
 test.groupsummarysc(['grade'],['fico_range_high'])
 
 def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
-                   cut = False, quantile = 5,is_quantile = True, arg*):
+                   cut = False, quantile = 5,is_bucket = False, arg*):
     """ provide a summary of measurevar groupby groupvar with bootstrap conf interval.
     measurevar and groupvar are list of column names. You have a cut functionnality 
     if you want to cut the groupvar
-    if you want group of the same size instead of quantile put is_group = True"""
+    if you want bucket of equal length instead of quantile put is_bucket = True """
     def ci_inf(x):
         return bootstrap.ci(data=x, statfunction=scipy.mean, alpha = confint,
                             n_samples = nsamples,*arg)[0]
@@ -212,7 +213,7 @@ def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
     df = self[col]
     if cut == True:
         for var in groupvar:
-            if is_group == True:
+            if is_bucket == True:
                 df[var] = pd.cut(df[var],bins = quantile)
             else: 
                 df[var] = pd.qcut(df[var],q = quantile)
@@ -223,11 +224,11 @@ test.groupsummarybc(['grade'],['fico_range_high'])
 test.groupsummarybc(['grade'],['fico_range_high'],addkey =False).columns
 
 def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
-                   cut = False, quantile = 5,is_group = False, *arg):
+                   cut = False, quantile = 5,is_bucket = False, *arg):
     """ provide a more complete summary than groupsummarysc of measurevar
     groupby groupvar with student conf interval.measurevar and groupvar
     are list of column names 
-    if you want group of the same size instead of quantile put is_group = True"""
+    if you want bucket of equal length instead of quantile put is_bucket = True """
     
     # creating the list of functions 
     def se(x):
@@ -246,10 +247,10 @@ def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
     'median','std','mad',skewness ,kurtosis,quantile_75,'max']
     col = measurevar + groupvar 
     df = self[col]
-    # Correct the problem of unicity of the bins 
+    # Correct the problem of unicity 
     if cut == True:
         for var in groupvar:
-            if is_group == True:
+            if is_bucket == True:
                 df[var] = pd.cut(df[var],bins = quantile)
             else: 
                 df[var] = pd.qcut(df[var],q = quantile)
