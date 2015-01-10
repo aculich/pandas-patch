@@ -142,7 +142,7 @@ test.detailledsummary()
 
 def groupsummarys(self,groupvar,measurevar):
     """ provide a summary of measurevar groupby groupvar. measurevar and 
-    groupvar are list of column names """
+    groupvar are list of column names. this function is optimized for speed """
     functions = ['count','min','mean','median','std','max']
     col = measurevar + groupvar 
     df = self[col]
@@ -165,7 +165,7 @@ def groupsummaryd(self,groupvar,measurevar):
 pd.DataFrame.groupsummaryd = groupsummaryd
 test.groupsummaryd(['grade'],['fico_range_high'])
 
-def groupsummarysc(self,groupvar,measurevar,confint=0.95,*arg):
+def groupsummarysc(self,groupvar,measurevar,confint=0.95,addkey = True,*arg):
     """ provide a summary of measurevar groupby groupvar with student conf interval.
     measurevar and groupvar are list of column names """
     def se(x):
@@ -176,12 +176,13 @@ def groupsummarysc(self,groupvar,measurevar,confint=0.95,*arg):
     functions = ['count','min','mean',se,student_ci,'median','std','max']
     col = measurevar + groupvar 
     df = self[col]
-    return df.groupby(groupvar).agg(functions)
+    return df.groupby(groupvar,group_keys = addkey).agg(functions)
 
 pd.DataFrame.groupsummarysc = groupsummarysc
 test.groupsummarysc(['grade'],['fico_range_high'])
 
-def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,*arg):
+def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
+                   addkey = True,*arg):
     """ provide a summary of measurevar groupby groupvar with bootstrap conf interval.
     measurevar and groupvar are list of column names """
     def ci_inf(x):
@@ -194,7 +195,36 @@ def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,*arg):
     functions = ['count','min',ci_inf,'mean',ci_up,'median','std','max']
     col = measurevar + groupvar 
     df = self[col]
-    return df.groupby(groupvar).agg(functions)
+    return df.groupby(groupvar,group_keys = addkey).agg(functions)
 
 pd.DataFrame.groupsummarybc = groupsummarybc
 test.groupsummarybc(['grade'],['fico_range_high'])
+test.groupsummarybc(['grade'],['fico_range_high'],addkey =False).columns
+
+def groupsummaryscc(self,groupvar,measurevar,confint=0.95,addkey = True,*arg):
+    """ provide a more complete summary than groupsummarysc of measurevar
+    groupby groupvar with student conf interval.measurevar and groupvar
+    are list of column names """
+    
+    # creating the list of functions 
+    def se(x):
+        return x.std() / np.sqrt(len(x))
+    def student_ci(x):
+        return se(x) * scipy.stats.t.interval(confint, len(x) - 1,*arg)[1]
+    def quantile_25(x):
+        return x.quantile(0.25)
+    def quantile_75(x):
+        return x.quantile(0.75)
+    def skewness(x):
+        return x.skew()
+    def kurtosis(x):
+        return x.kurt()
+    functions = ['count','min', quantile_25,'mean',se,student_ci,
+    'median','std','mad',skewness ,kurtosis,quantile_75,'max']
+    col = measurevar + groupvar 
+    df = self[col]
+    # grouping, apply function and return results 
+    return df.groupby(groupvar,group_keys = addkey).agg(functions)
+    
+pd.DataFrame.groupsummaryscc = groupsummaryscc
+test.groupsummaryscc(['grade'],['fico_range_high'])
