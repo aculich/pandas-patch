@@ -117,7 +117,7 @@ test_wd = test.filterdupcol()
 test_wd.findupcol()
 
 #########################################################
-# Data summary helpers 
+# Data basic summary helpers 
 #########################################################
 def dfnum(self):
     """ select columns with numeric type, the output is a list of columns  """
@@ -139,6 +139,11 @@ def detailledsummary(self):
                                       
 pd.DataFrame.detailledsummary = detailledsummary
 test.detailledsummary()
+
+
+#########################################################
+# Data grouped summary helpers 
+#########################################################
 
 def groupsummarys(self,groupvar,measurevar):
     """ provide a summary of measurevar groupby groupvar. measurevar and 
@@ -165,9 +170,11 @@ def groupsummaryd(self,groupvar,measurevar):
 pd.DataFrame.groupsummaryd = groupsummaryd
 test.groupsummaryd(['grade'],['fico_range_high'])
 
-def groupsummarysc(self,groupvar,measurevar,confint=0.95,addkey = True,*arg):
+def groupsummarysc(self,groupvar,measurevar,confint=0.95,addkey = True,
+                   cut = False, quantile = 5,is_group = False,*arg):
     """ provide a summary of measurevar groupby groupvar with student conf interval.
-    measurevar and groupvar are list of column names """
+    measurevar and groupvar are list of column names
+    if you want group of the same size instead of quantile put is_group = True"""
     def se(x):
         return x.std() / np.sqrt(len(x))
  
@@ -176,15 +183,23 @@ def groupsummarysc(self,groupvar,measurevar,confint=0.95,addkey = True,*arg):
     functions = ['count','min','mean',se,student_ci,'median','std','max']
     col = measurevar + groupvar 
     df = self[col]
-    return df.groupby(groupvar,group_keys = addkey).agg(functions)
+    if cut == True:
+        for var in groupvar:
+            if id_group == True:
+                df[var] = pd.cut(df[var],bins = quantile)
+            else: 
+                df[var] = pd.qcut(df[var],q = quantile)
+    return df.groupby(groupvar).agg(functions)
 
 pd.DataFrame.groupsummarysc = groupsummarysc
 test.groupsummarysc(['grade'],['fico_range_high'])
 
 def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
-                   addkey = True,*arg):
+                   cut = False, quantile = 5,is_quantile = True, arg*):
     """ provide a summary of measurevar groupby groupvar with bootstrap conf interval.
-    measurevar and groupvar are list of column names """
+    measurevar and groupvar are list of column names. You have a cut functionnality 
+    if you want to cut the groupvar
+    if you want group of the same size instead of quantile put is_group = True"""
     def ci_inf(x):
         return bootstrap.ci(data=x, statfunction=scipy.mean, alpha = confint,
                             n_samples = nsamples,*arg)[0]
@@ -195,16 +210,24 @@ def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
     functions = ['count','min',ci_inf,'mean',ci_up,'median','std','max']
     col = measurevar + groupvar 
     df = self[col]
-    return df.groupby(groupvar,group_keys = addkey).agg(functions)
+    if cut == True:
+        for var in groupvar:
+            if is_group == True:
+                df[var] = pd.cut(df[var],bins = quantile)
+            else: 
+                df[var] = pd.qcut(df[var],q = quantile)
+    return df.groupby(groupvar).agg(functions)
 
 pd.DataFrame.groupsummarybc = groupsummarybc
 test.groupsummarybc(['grade'],['fico_range_high'])
 test.groupsummarybc(['grade'],['fico_range_high'],addkey =False).columns
 
-def groupsummaryscc(self,groupvar,measurevar,confint=0.95,addkey = True,*arg):
+def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
+                   cut = False, quantile = 5,is_group = False, *arg):
     """ provide a more complete summary than groupsummarysc of measurevar
     groupby groupvar with student conf interval.measurevar and groupvar
-    are list of column names """
+    are list of column names 
+    if you want group of the same size instead of quantile put is_group = True"""
     
     # creating the list of functions 
     def se(x):
@@ -223,8 +246,17 @@ def groupsummaryscc(self,groupvar,measurevar,confint=0.95,addkey = True,*arg):
     'median','std','mad',skewness ,kurtosis,quantile_75,'max']
     col = measurevar + groupvar 
     df = self[col]
+    # Correct the problem of unicity of the bins 
+    if cut == True:
+        for var in groupvar:
+            if is_group == True:
+                df[var] = pd.cut(df[var],bins = quantile)
+            else: 
+                df[var] = pd.qcut(df[var],q = quantile)
+            
     # grouping, apply function and return results 
-    return df.groupby(groupvar,group_keys = addkey).agg(functions)
+    return df.groupby(groupvar).agg(functions)
     
 pd.DataFrame.groupsummaryscc = groupsummaryscc
 test.groupsummaryscc(['grade'],['fico_range_high'])
+test.groupsummaryscc(['fico_range_high'],['dti'],cut =True)
