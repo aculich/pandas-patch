@@ -196,7 +196,7 @@ pd.DataFrame.groupsummarysc = groupsummarysc
 test.groupsummarysc(['grade'],['fico_range_high'])
 
 def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
-                   cut = False, quantile = 5,is_bucket = False, arg*):
+                   cut = False, quantile = 5,is_bucket = False, *arg):
     """ provide a summary of measurevar groupby groupvar with bootstrap conf interval.
     measurevar and groupvar are list of column names. You have a cut functionnality 
     if you want to cut the groupvar
@@ -221,14 +221,14 @@ def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
 
 pd.DataFrame.groupsummarybc = groupsummarybc
 test.groupsummarybc(['grade'],['fico_range_high'])
-test.groupsummarybc(['grade'],['fico_range_high'],addkey =False).columns
+test.groupsummarybc(['grade'],['fico_range_high']).columns
 
 def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
                    cut = False, quantile = 5,is_bucket = False, *arg):
     """ provide a more complete summary than groupsummarysc of measurevar
     groupby groupvar with student conf interval.measurevar and groupvar
     are list of column names 
-    if you want bucket of equal length instead of quantile put is_bucket = True """
+    if you want bucket of equal length instead of quagit ntile put is_bucket = True """
     
     # creating the list of functions 
     def se(x):
