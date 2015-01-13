@@ -171,8 +171,8 @@ def groupsummaryd(self,groupvar,measurevar):
 pd.DataFrame.groupsummaryd = groupsummaryd
 test.groupsummaryd(['grade'],['fico_range_high'])
 
-def groupsummarysc(self,groupvar,measurevar,confint=0.95,addkey = True,
-                   cut = False, quantile = 5,is_bucket = False,*arg):
+def groupsummarysc(self,groupvar,measurevar,confint=0.95,id_group= True,
+                   cut = False, quantile = 5,is_bucket = False,**kwarg):
     """ provide a summary of measurevar groupby groupvar with student conf interval.
     measurevar and groupvar are list of column names
     if you want bucket of equal length instead of quantile put is_bucket = True """
@@ -180,7 +180,7 @@ def groupsummarysc(self,groupvar,measurevar,confint=0.95,addkey = True,
         return x.std() / np.sqrt(len(x))
  
     def student_ci(x):
-        return se(x) * scipy.stats.t.interval(confint, len(x) - 1,*arg)[1]
+        return se(x) * scipy.stats.t.interval(confint, len(x) - 1,**kwarg)[1]
     functions = ['count','min','mean',se,student_ci,'median','std','max']
     col = measurevar + groupvar 
     df = self[col]
@@ -196,17 +196,17 @@ pd.DataFrame.groupsummarysc = groupsummarysc
 test.groupsummarysc(['grade'],['fico_range_high'])
 
 def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
-                   cut = False, quantile = 5,is_bucket = False, *arg):
+                   cut = False, quantile = 5,is_bucket = False, **kwarg):
     """ provide a summary of measurevar groupby groupvar with bootstrap conf interval.
     measurevar and groupvar are list of column names. You have a cut functionnality 
     if you want to cut the groupvar
     if you want bucket of equal length instead of quantile put is_bucket = True """
     def ci_inf(x):
         return bootstrap.ci(data=x, statfunction=scipy.mean, alpha = confint,
-                            n_samples = nsamples,*arg)[0]
+                            n_samples = nsamples,**kwarg)[0]
     def ci_up(x):
         return bootstrap.ci(data=x, statfunction=scipy.mean, alpha = confint,
-                            n_samples = nsamples,*arg)[1]
+                            n_samples = nsamples,**kwarg)[1]
         
     functions = ['count','min',ci_inf,'mean',ci_up,'median','std','max']
     col = measurevar + groupvar 
@@ -221,10 +221,15 @@ def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
 
 pd.DataFrame.groupsummarybc = groupsummarybc
 test.groupsummarybc(['grade'],['fico_range_high'])
-test.groupsummarybc(['grade'],['fico_range_high']).columns
+
+kwargs = {'method': 'pi'}
+test.groupsummarybc(['grade'],['fico_range_high'])
+# or other solution for the use ok kwargs 
+del kwargs
+test.groupsummarybc(['grade'],['fico_range_high'],method = 'pi')
 
 def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
-                   cut = False, quantile = 5,is_bucket = False, *arg):
+                   cut = False, quantile = 5,is_bucket = False, **kwarg):
     """ provide a more complete summary than groupsummarysc of measurevar
     groupby groupvar with student conf interval.measurevar and groupvar
     are list of column names 
@@ -234,7 +239,7 @@ def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
     def se(x):
         return x.std() / np.sqrt(len(x))
     def student_ci(x):
-        return se(x) * scipy.stats.t.interval(confint, len(x) - 1,*arg)[1]
+        return se(x) * scipy.stats.t.interval(confint, len(x) - 1,**kwarg)[1]
     def quantile_25(x):
         return x.quantile(0.25)
     def quantile_75(x):
