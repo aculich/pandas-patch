@@ -22,14 +22,7 @@ import scipy
 from scipy.stats import t
 import scikits.bootstrap as bootstrap
 
-#########################################################
-# Create a test dataframe 
-#########################################################
 
-test = DataFrame(read_csv('lc_test.csv'))
-test['na_col'] = np.nan
-test['constant_col'] = 'constant'
-test['duplicated_column'] = test.id
 
 #########################################################
 # Data cleaning and exploration helpers 
@@ -44,7 +37,7 @@ def nacolcount(self):
     return df
 
 pd.DataFrame.nacolcount = nacolcount
-test.nacolcount()
+
     
 def narowcount(self):
     """ count the number of missing values per rows """
@@ -54,7 +47,7 @@ def narowcount(self):
     return df
 
 pd.DataFrame.narowcount = narowcount
-test.narowcount()
+
 
 def manymissing(self,a):
     """ identify columns of a dataframe with many missing values ( >= a) """
@@ -62,7 +55,7 @@ def manymissing(self,a):
     return df[df['Napercentage'] >= a].index
     
 pd.DataFrame.manymissing = manymissing
-test.manymissing(0.5)
+
 
 def constantcol(self):
     """ identify constant columns """
@@ -72,7 +65,7 @@ def constantcol(self):
 
     
 pd.DataFrame.constantcol = constantcol
-test.constantcol()    
+
 
 def nrow(self):
     """ return the number of rows """
@@ -83,9 +76,8 @@ def ncol(self):
     return self.shape[1]
 
 pd.DataFrame.nrow = nrow
-test.nrow()
 pd.DataFrame.ncol = ncol
-test.ncol()
+
 
 def detectkey(self):
     """ identify id or key columns """
@@ -93,7 +85,7 @@ def detectkey(self):
     return df[df == self.nrow()].index
     
 pd.DataFrame.detectkey = detectkey
-test.detectkey()
+
 
 def findupcol(self):
     """ find duplicated columns and return the result as a list of list
@@ -108,14 +100,13 @@ def findupcol(self):
     return list(np.unique([col for col in l if col != [] ]))
 
 pd.DataFrame.findupcol = findupcol
-test.findupcol()
+
 
 def filterdupcol(self):
     """ return a dataframe without duplicated columns """
     return self.drop(self.columns[self.T.duplicated()],axis =1)
 pd.DataFrame.filterdupcol = filterdupcol
-test_wd = test.filterdupcol()
-test_wd.findupcol()
+
 
 #########################################################
 # Data basic summary helpers 
@@ -125,7 +116,6 @@ def dfnum(self):
     return self.columns[((self.dtypes == float)|(self.dtypes == int))]
 
 pd.DataFrame.dfnum = dfnum 
-test.dfnum()
        
 def detailledsummary(self):
     """ provide a more complete sumary than describe, it is using only numeric
@@ -139,7 +129,6 @@ def detailledsummary(self):
     'Kurtosis','Thirdquartile','Max']).T
                                       
 pd.DataFrame.detailledsummary = detailledsummary
-test.detailledsummary()
 
 
 #########################################################
@@ -155,10 +144,7 @@ def groupsummarys(self,groupvar,measurevar):
     return df.groupby(groupvar).agg(functions)
 
 pd.DataFrame.groupsummarys = groupsummarys
-test1 = test.groupsummarys(['grade'],['fico_range_high'])
 
-# multiindex structure 
-test.groupsummarys(['grade','sub_grade'],['fico_range_high','dti'])
 
 
 def groupsummaryd(self,groupvar,measurevar):
@@ -169,7 +155,7 @@ def groupsummaryd(self,groupvar,measurevar):
     return df.groupby(groupvar).describe()
 
 pd.DataFrame.groupsummaryd = groupsummaryd
-test.groupsummaryd(['grade'],['fico_range_high'])
+
 
 def groupsummarysc(self,groupvar,measurevar,confint=0.95,id_group= True,
                    cut = False, quantile = 5,is_bucket = False,**kwarg):
@@ -193,7 +179,7 @@ def groupsummarysc(self,groupvar,measurevar,confint=0.95,id_group= True,
     return df.groupby(groupvar).agg(functions)
 
 pd.DataFrame.groupsummarysc = groupsummarysc
-test.groupsummarysc(['grade'],['fico_range_high'])
+
 
 def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
                    cut = False, quantile = 5,is_bucket = False, **kwarg):
@@ -220,13 +206,7 @@ def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
     return df.groupby(groupvar).agg(functions)
 
 pd.DataFrame.groupsummarybc = groupsummarybc
-test.groupsummarybc(['grade'],['fico_range_high'])
 
-kwargs = {'method': 'pi'}
-test.groupsummarybc(['grade'],['fico_range_high'])
-# or other solution for the use ok kwargs 
-del kwargs
-test.groupsummarybc(['grade'],['fico_range_high'],method = 'pi')
 
 def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
                    cut = False, quantile = 5,is_bucket = False, **kwarg):
@@ -264,5 +244,51 @@ def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
     return df.groupby(groupvar).agg(functions)
     
 pd.DataFrame.groupsummaryscc = groupsummaryscc
-test.groupsummaryscc(['grade'],['fico_range_high'])
-test.groupsummaryscc(['fico_range_high'],['dti'],cut =True)
+
+
+def fivenum(v):
+    """ Returns Tukey's five number summary (minimum, lower-hinge, median, upper-hinge, maximum)
+    for the input vector, a list or array of numbers based on 1.5 times the interquartile distance """
+    q1 = scipy.stats.scoreatpercentile(v,25)
+    q3 = scipy.stats.scoreatpercentile(v,75)
+    iqd = q3-q1
+    md = np.median(v)
+    whisker = 1.5*iqd
+    return min(v), md-whisker, md, md+whisker, max(v)
+
+# Test of the modules of the patch
+if __name__ == "__main__":
+    #########################################################
+    # Create a test dataframe 
+    #########################################################
+    test = DataFrame(read_csv('lc_test.csv'))
+    test['na_col'] = np.nan
+    test['constant_col'] = 'constant'
+    test['duplicated_column'] = test.id
+    #########################################################
+    # Testing the functions 
+    #########################################################
+    test.nacolcount()
+    test.narowcount()
+    test.manymissing(0.5)
+    test.nrow()
+    test.ncol()
+    test.detectkey()
+    test.findupcol()
+    test_wd = test.filterdupcol()
+    test_wd.findupcol()
+    test.dfnum()
+    test.detailledsummary()
+    test1 = test.groupsummarys(['grade'],['fico_range_high'])
+    # multiindex structure 
+    test.groupsummarys(['grade','sub_grade'],['fico_range_high','dti'])
+    test.groupsummaryd(['grade'],['fico_range_high'])
+    test.groupsummarysc(['grade'],['fico_range_high'])
+    test.groupsummarybc(['grade'],['fico_range_high'])
+    kwargs = {'method': 'pi'}
+    test.groupsummarybc(['grade'],['fico_range_high'])
+    # or other solution for the use ok kwargs 
+    del kwargs
+    test.groupsummarybc(['grade'],['fico_range_high'],method = 'pi')
+    test.groupsummaryscc(['grade'],['fico_range_high'])
+    test.groupsummaryscc(['fico_range_high'],['dti'],cut =True)
