@@ -104,9 +104,36 @@ pd.DataFrame.findupcol = findupcol
 
 def filterdupcol(self):
     """ return a dataframe without duplicated columns """
-    return self.drop(self.columns[self.T.duplicated()],axis =1)
+    return self.drop(self.columns[self.T.duplicated()], axis =1)
 pd.DataFrame.filterdupcol = filterdupcol
 
+
+def nearzerovar(self, freq_cut = 95/5, unique_cut = 10, save_metrics = False):
+    """ identify predictors with near-zero variance. 
+            freq_cut: cutoff ratio of frequency of most common value to second 
+            most common value.
+            unique_cut: cutoff percentage of unique value over total number of 
+            samples.
+            save_metrics: if False, print dataframe and return NON near-zero var 
+            col indexes, if True, returns the whole dataframe.
+    """
+
+    percent_unique = self.apply(lambda x: 100*len(x.unique())/len(x), axis=0)
+    freq_ratio = []
+    for col in self.columns:
+        if len(self[col].unique()) == 1:
+            freq_ratio += [1]
+        else:
+            freq_ratio += [ float(self[col].value_counts().iloc[0])/self[col].value_counts().iloc[1] ]
+    
+    nzv = ((np.array(freq_ratio) >= freq_cut) + (percent_unique <= unique_cut) >= 1)
+
+    if save_metrics:
+        return pd.DataFrame({'percent_unique': percent_unique, 'freq_ratio': freq_ratio, 'nzv': nzv}, index=self.columns)
+    else:
+        print(pd.DataFrame({'percent_unique': percent_unique, 'freq_ratio': freq_ratio, 'nzv': nzv}, index=self.columns))
+        return nzv[nzv == True].index 
+pd.DataFrame.nearzerovar = nearzerovar
 
 #########################################################
 # Data basic summary helpers 
