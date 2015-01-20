@@ -255,7 +255,11 @@ def fivenum(v):
     md = np.median(v)
     whisker = 1.5*iqd
     return min(v), md-whisker, md, md+whisker, max(v)
+    
+def test_m(self):
+    return len(self.columns)
 
+pd.DataFrame.test_m = test_m
 # Test of the modules of the patch
 if __name__ == "__main__":
     #########################################################
