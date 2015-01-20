@@ -304,6 +304,7 @@ if __name__ == "__main__":
     test.findupcol()
     test_wd = test.filterdupcol()
     test_wd.findupcol()
+    test.nearzerovar()
     test.dfnum()
     test.detailledsummary()
     test1 = test.groupsummarys(['grade'],['fico_range_high'])
