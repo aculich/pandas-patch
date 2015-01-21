@@ -133,7 +133,54 @@ def nearzerovar(self, freq_cut = 95/5, unique_cut = 10, save_metrics = False):
     else:
         print(pd.DataFrame({'percent_unique': percent_unique, 'freq_ratio': freq_ratio, 'nzv': nzv}, index=self.columns))
         return nzv[nzv == True].index 
+
 pd.DataFrame.nearzerovar = nearzerovar
+
+
+def findcorr(self, cutoff=.90, method='pearson', data_frame=False):
+    """
+        implementation of the Recursive Pairwise Elimination.        
+        The function finds the highest correlated pair and removes the most 
+        highly correlated feature of the pair, then repeats the process 
+        until the threshold 'cutoff' is reached.
+        
+        will return a dataframe is 'data_frame' is set to True, and the list
+        of predictors to remove otherwise.
+
+        Adaptation of 'findCorrelation' function in the caret package in R
+    """
+    res = []
+    temp = self
+        
+    cor = temp.corr(method=method)
+    # pandas doesn't give a value for diagonal cells
+    for col in cor.columns
+        cor[col][col] = 0
+    
+    max_cor = cor.max()
+    while max_cor.max() > cutoff:            
+        A = max_cor.idxmax()
+        B = cor[A].idxmax()
+        
+        if cor[A].mean() > cor[B].mean():
+            temp = temp.drop(A, 1)
+            res += [A]
+        else:
+            temp = temp.drop(B, 1)
+            res += [B]
+            
+        cor = temp.corr(method=method)
+        for col in cor.columns:
+            cor[col][col] = 0
+    
+        max_cor = cor.max()
+        
+    if data_frame:
+        return temp
+    else:
+        return res
+
+pd.DataFrame.findcorr = findcorr
 
 #########################################################
 # Data basic summary helpers 
@@ -305,6 +352,7 @@ if __name__ == "__main__":
     test_wd = test.filterdupcol()
     test_wd.findupcol()
     test.nearzerovar()
+    test.findcorr()
     test.dfnum()
     test.detailledsummary()
     test1 = test.groupsummarys(['grade'],['fico_range_high'])
