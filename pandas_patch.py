@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Wed Jan 21 23:37:37 2015
+
+@author: efourrier
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Sun Jan  4 00:34:33 2015
 
 @author: efourrier
@@ -41,7 +48,7 @@ pd.DataFrame.nacolcount = nacolcount
     
 def narowcount(self):
     """ count the number of missing values per rows """
-    Serie = self.apply(lambda x: sum(pd.isnull(x)),axis = 1 )   
+    Serie = self.apply(lambda x: sum(pd.isnull(x)),axis = 1)   
     df =  DataFrame(Serie,columns = ['Nanumber'])
     df['Napercentage'] = df['Nanumber']/(self.shape[1])
     return df
@@ -154,7 +161,7 @@ def findcorr(self, cutoff=.90, method='pearson', data_frame=False):
         
     cor = temp.corr(method=method)
     # pandas doesn't give a value for diagonal cells
-    for col in cor.columns
+    for col in cor.columns:
         cor[col][col] = 0
     
     max_cor = cor.max()
@@ -332,7 +339,23 @@ def fivenum(v):
     whisker = 1.5*iqd
     return min(v), md-whisker, md, md+whisker, max(v)
 
+#########################################################
+# Unclassified 
+#########################################################
 
+def melt(self, id_variable, value_name = "value",variable_name = "variable"):
+    """ This function is used to melt a dataframe, what means transform a 
+    long dataframe into a wide dataframe (like sql table with key type)
+    id_variable has to be a list    
+    """
+    df = self.copy()
+    df = df.set_index(id_variable)
+    df = df.stack()
+    df = df.reset_index()
+    df.columns = id_variable + [variable_name] + [value_name]
+    return df
+
+pd.DataFrame.melt = melt
 
 def info(object, spacing=10, collapse=1):
     """Print methods and doc strings.
