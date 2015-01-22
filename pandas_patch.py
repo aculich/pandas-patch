@@ -247,14 +247,30 @@ pd.DataFrame.groupsummaryscc = groupsummaryscc
 
 
 def fivenum(v):
-    """ Returns Tukey's five number summary (minimum, lower-hinge, median, upper-hinge, maximum)
-    for the input vector, a list or array of numbers based on 1.5 times the interquartile distance """
+    """ Returns Tukey's five number summary 
+    (minimum, lower-hinge, median, upper-hinge, maximum)
+    for the input vector, a list or array of numbers 
+    based on 1.5 times the interquartile distance """
     q1 = scipy.stats.scoreatpercentile(v,25)
     q3 = scipy.stats.scoreatpercentile(v,75)
     iqd = q3-q1
     md = np.median(v)
     whisker = 1.5*iqd
     return min(v), md-whisker, md, md+whisker, max(v)
+
+
+
+def info(object, spacing=10, collapse=1):
+    """Print methods and doc strings.
+    Takes module, class, list, dictionary, or string."""
+    methodList = [method for method in dir(object) if callable(getattr(object, method))]
+    processFunc = collapse and (lambda s: " ".join(s.split())) or (lambda s: s)
+    print "\n".join(["%s %s" %
+                      (method.ljust(spacing),
+                       processFunc(str(getattr(object, method).__doc__)))
+                     for method in methodList])
+if __name__ == "__main__":
+    print info.__doc__
 
 # Test of the modules of the patch
 if __name__ == "__main__":
