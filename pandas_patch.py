@@ -154,8 +154,8 @@ def findcorr(self, cutoff=.90, method='pearson', data_frame=False):
         
     cor = temp.corr(method=method)
     # pandas doesn't give a value for diagonal cells
-    for col in cor.columns
-        cor[col][col] = 0
+    for col in cor.columns:
+        cor[col][col] = 0 # This is not mathematically correct but easier for the function
     
     max_cor = cor.max()
     while max_cor.max() > cutoff:            
