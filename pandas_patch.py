@@ -117,7 +117,7 @@ def filterdupcol(self):
     return self.drop(self.columns[self.T.duplicated()], axis =1)
 pd.DataFrame.filterdupcol = filterdupcol
 
-def df_quantiles(self,nb_quantiles = 10,only_numeric = True):
+def dfquantiles(self,nb_quantiles = 10,only_numeric = True):
     """ This function gives you a all the quantiles 
     of the numeric variables of the dataframe """
     binq = 1.0/nb_quantiles
@@ -125,12 +125,8 @@ def df_quantiles(self,nb_quantiles = 10,only_numeric = True):
         self = self[self.dfnum()]
     return self.quantile([binq*i for i in xrange(nb_quantiles +1)])
     
-pd.DataFrame.df_quantiles = df_quantiles
+pd.DataFrame.dfquantiles = dfquantiles
 
-
-def test_se(self):
-    self = self[0:100]
-pd.DataFrame.test_se = test_se
 
 def structure(self):
     """ this function will return a more complete type summary of variables type
@@ -405,7 +401,7 @@ if __name__ == "__main__":
     test.ncol()
     test.detectkey()
     test.findupcol()
-    test.df_quantiles(20)
+    test.dfquantiles(20)
     test_wd = test.filterdupcol()
     test_wd.findupcol()
     test.nearzerovar()
