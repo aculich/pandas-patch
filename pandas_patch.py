@@ -1,12 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Jan 21 23:37:37 2015
-
-@author: efourrier
-"""
-
-# -*- coding: utf-8 -*-
-"""
 Created on Sun Jan  4 00:34:33 2015
 
 @author: efourrier
@@ -126,6 +119,7 @@ def dfquantiles(self,nb_quantiles = 10,only_numeric = True):
     return self.quantile([binq*i for i in xrange(nb_quantiles +1)])
     
 pd.DataFrame.dfquantiles = dfquantiles
+
 
 
 def structure(self):
