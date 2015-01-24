@@ -68,8 +68,6 @@ def constantcol(self):
     """ identify constant columns """
     df = self.apply(lambda x: len(x.unique()),axis = 0 )
     return df[df == 1].index
-
-
     
 pd.DataFrame.constantcol = constantcol
 
@@ -85,6 +83,11 @@ def ncol(self):
 pd.DataFrame.nrow = nrow
 pd.DataFrame.ncol = ncol
 
+def dfnum(self):
+    """ select columns with numeric type, the output is a list of columns  """
+    return self.columns[((self.dtypes == float)|(self.dtypes == int))]
+
+pd.DataFrame.dfnum = dfnum 
 
 def detectkey(self):
     """ identify id or key columns """
@@ -113,6 +116,26 @@ def filterdupcol(self):
     """ return a dataframe without duplicated columns """
     return self.drop(self.columns[self.T.duplicated()], axis =1)
 pd.DataFrame.filterdupcol = filterdupcol
+
+def df_quantiles(self,nb_quantiles = 10,only_numeric = True):
+    """ This function gives you a all the quantiles 
+    of the numeric variables of the dataframe """
+    binq = 1.0/nb_quantiles
+    if only_numeric:
+        self = self[self.dfnum()]
+    return self.quantile([binq*i for i in xrange(nb_quantiles +1)])
+    
+pd.DataFrame.df_quantiles = df_quantiles
+
+
+def test_se(self):
+    self = self[0:100]
+pd.DataFrame.test_se = test_se
+
+def structure(self):
+    """ this function will return a more complete type summary of variables type
+    """
+    
 
 
 def nearzerovar(self, freq_cut = 95/5, unique_cut = 10, save_metrics = False):
@@ -192,11 +215,7 @@ pd.DataFrame.findcorr = findcorr
 #########################################################
 # Data basic summary helpers 
 #########################################################
-def dfnum(self):
-    """ select columns with numeric type, the output is a list of columns  """
-    return self.columns[((self.dtypes == float)|(self.dtypes == int))]
 
-pd.DataFrame.dfnum = dfnum 
        
 def detailledsummary(self):
     """ provide a more complete sumary than describe, it is using only numeric
@@ -346,7 +365,7 @@ def fivenum(v):
 def melt(self, id_variable, value_name = "value",variable_name = "variable"):
     """ This function is used to melt a dataframe, what means transform a 
     long dataframe into a wide dataframe (like sql table with key type)
-    id_variable has to be a list    
+    id_variable has to be a list of columns 
     """
     df = self.copy()
     df = df.set_index(id_variable)
@@ -366,8 +385,6 @@ def info(object, spacing=10, collapse=1):
                       (method.ljust(spacing),
                        processFunc(str(getattr(object, method).__doc__)))
                      for method in methodList])
-if __name__ == "__main__":
-    print info.__doc__
 
 # Test of the modules of the patch
 if __name__ == "__main__":
@@ -388,6 +405,7 @@ if __name__ == "__main__":
     test.ncol()
     test.detectkey()
     test.findupcol()
+    test.df_quantiles(20)
     test_wd = test.filterdupcol()
     test_wd.findupcol()
     test.nearzerovar()
