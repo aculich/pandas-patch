@@ -21,7 +21,8 @@ from pandas import read_csv
 import scipy
 from scipy.stats import t
 import scikits.bootstrap as bootstrap
-
+import re 
+from dateutil.parser import parse
 
 
 #########################################################
@@ -81,10 +82,15 @@ def dfnum(self):
 
 pd.DataFrame.dfnum = dfnum 
 
-def detectkey(self):
-    """ identify id or key columns """
+def detectkey(self,index_format = True):
+    """ identify id or key columns as an index if index_format = True or 
+    as a Serie if index_format = False """
+    if index_format:
     df = self.apply(lambda x: len(x.unique()),axis = 0 )
     return df[df == self.nrow()].index
+    else :
+        test.apply(lambda x: len(x.unique()) == len(x) ,axis = 0)
+
     
 pd.DataFrame.detectkey = detectkey
 
@@ -122,11 +128,30 @@ def dfquantiles(self,nb_quantiles = 10,only_numeric = True):
     
 pd.DataFrame.dfquantiles = dfquantiles
 
-
+def is_date(self):
+    """ to reprogram it is ugly """ 
+    d = {}
+    for col in self.columns:
+        try :
+             d[col] = False
+             # i loop trough non missing value 
+             # this try-except loop is bad programming 
+             l = [parse(e) for e in self.loc[pd.notnull(self[col]),col]]
+             len_not_na = self[pd.notnull(self[col])].nrow()
+             if len(l) == len_not_na and len_not_na > 0 :          
+                 d[col] = True
+        except : 
+            continue 
+    return pd.Series(d)
+            
+pd.DataFrame.is_date = is_date            
 
 def structure(self):
     """ this function will return a more complete type summary of variables type
     """
+    primary_type = test.dtypes
+    is_key = self.detectkey(index_format = False)
+    is_date = self.is_date()    
     
 
 
@@ -359,6 +384,7 @@ def fivenum(v):
     whisker = 1.5*iqd
     return min(v), md-whisker, md, md+whisker, max(v)
 
+
 #########################################################
 # Unclassified 
 #########################################################
@@ -409,6 +435,7 @@ if __name__ == "__main__":
     test.detectkey()
     test.findupcol()
     test.dfquantiles(20)
+    test.is_date()
     test_wd = test.filterdupcol()
     test_wd.findupcol()
     test.nearzerovar()
