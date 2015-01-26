@@ -56,7 +56,6 @@ def manymissing(self,a):
     
 pd.DataFrame.manymissing = manymissing
 
-
 def constantcol(self):
     """ identify constant columns """
     df = self.apply(lambda x: len(x.unique()),axis = 0 )
@@ -111,8 +110,11 @@ def filterdupcol(self):
 pd.DataFrame.filterdupcol = filterdupcol
 
 def dfquantiles(self,nb_quantiles = 10,only_numeric = True):
-    """ This function gives you a all the quantiles 
-    of the numeric variables of the dataframe """
+    """ this function gives you a all the quantiles 
+    of the numeric variables of the dataframe
+    only_numeric will calculate it only for numeric variables, 
+    for only_numeric = False you will get NaN value for non numeric 
+    variables """
     binq = 1.0/nb_quantiles
     if only_numeric:
         self = self[self.dfnum()]
@@ -336,6 +338,15 @@ def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
 pd.DataFrame.groupsummaryscc = groupsummaryscc
 
 
+def group_average(self,groupvar,measurevar,avg_weight):
+    """ return an weighted ( the weight are given by avg_weight) mean 
+    of the variable measurevar group by groupvar """
+    get_wavg = lambda df: np.average(a = df[measurevar], weights = df[avg_weight])
+    return self.groupby(groupvar).apply(get_wavg)
+
+pd.DataFrame.group_average = group_average
+
+
 def fivenum(v):
     """ Returns Tukey's five number summary 
     (minimum, lower-hinge, median, upper-hinge, maximum)
@@ -385,6 +396,8 @@ if __name__ == "__main__":
     test['na_col'] = np.nan
     test['constant_col'] = 'constant'
     test['duplicated_column'] = test.id
+    test.int_rate = test.int_rate.str.findall(re.compile(r'\d+.\d+')).str.get(0)
+    test.int_rate = test.int_rate.astype(float) # convert to float type 
     #########################################################
     # Testing the functions 
     #########################################################
@@ -415,3 +428,4 @@ if __name__ == "__main__":
     test.groupsummarybc(['grade'],['fico_range_high'],method = 'pi')
     test.groupsummaryscc(['grade'],['fico_range_high'])
     test.groupsummaryscc(['fico_range_high'],['dti'],cut =True)
+    test.group_average('grade','int_rate','loan_amnt')
