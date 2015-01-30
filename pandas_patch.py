@@ -66,8 +66,9 @@ pd.DataFrame.constantcol = constantcol
 
 
 def nrow(self):
-    """ return the number of rows """
-    return self.shape[0]
+    """ return the number of rows
+        This is faster than self.shape[0] """
+    return len(self.index)
     
 def ncol(self):
     """ return the number of cols """
@@ -86,8 +87,8 @@ def detectkey(self,index_format = True):
     """ identify id or key columns as an index if index_format = True or 
     as a Serie if index_format = False """
     if index_format:
-    df = self.apply(lambda x: len(x.unique()),axis = 0 )
-    return df[df == self.nrow()].index
+        df = self.apply(lambda x: len(x.unique()),axis = 0 )
+        return df[df == self.nrow()].index
     else :
         test.apply(lambda x: len(x.unique()) == len(x) ,axis = 0)
 
@@ -105,11 +106,27 @@ def findupcol(self):
         index_temp = self.apply(lambda x: (x == self[col])).apply(lambda x:sum(x) == self.nrow())
         temp = list(self.columns[index_temp])
         l.append(temp)
-    return list(np.unique([col for col in l if col != [] ]))
+    return l
 
 pd.DataFrame.findupcol = findupcol
 
+def finduprow(self,subset = []):
+    """ find duplicated rows and return the result a sorted dataframe of all the
+    duplicates
+    subset is a list of columns to look for duplicates from this specific subset . """
+    if subset:
+        dup_index = (self.duplicated(subset = subset)) | (self.duplicated(subset = subset,take_last =True)) 
+    else :    
+        dup_index = (self.duplicated()) | (self.duplicated(take_last = True))
+        
+    if subset :
+        return self[dup_index].sort(subset)
+    else :
+        return self[dup_index].sort(self.columns[0])
 
+pd.DataFrame.finduprow = finduprow
+    
+    
 def filterdupcol(self):
     """ return a dataframe without duplicated columns """
     return self.drop(self.columns[self.T.duplicated()], axis =1)
@@ -173,7 +190,7 @@ def nearzerovar(self, freq_cut = 95/5, unique_cut = 10, save_metrics = False):
         else:
             freq_ratio += [ float(self[col].value_counts().iloc[0])/self[col].value_counts().iloc[1] ]
     
-    nzv = ((np.array(freq_ratio) >= freq_cut) + (percent_unique <= unique_cut) >= 1)
+    nzv = ((np.array(freq_ratio) >= freq_cut) & (percent_unique <= unique_cut) >= 1)
 
     if save_metrics:
         return pd.DataFrame({'percent_unique': percent_unique, 'freq_ratio': freq_ratio, 'nzv': nzv}, index=self.columns)
@@ -353,9 +370,9 @@ def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
     if cut == True:
         for var in groupvar:
             if is_bucket == True:
-                df[var] = pd.cut(df[var],bins = quantile)
+                df.loc[:,var] = pd.cut(df.loc[:,var],bins = quantile)
             else: 
-                df[var] = pd.qcut(df[var],q = quantile)
+                df.loc[:,var] = pd.qcut(df.loc[:,var],q = quantile)
             
     # grouping, apply function and return results 
     return df.groupby(groupvar).agg(functions)
@@ -418,15 +435,18 @@ if __name__ == "__main__":
     #########################################################
     # Create a test dataframe 
     #########################################################
+
     test = DataFrame(read_csv('lc_test.csv'))
     test['na_col'] = np.nan
     test['constant_col'] = 'constant'
     test['duplicated_column'] = test.id
-    test.int_rate = test.int_rate.str.findall(re.compile(r'\d+.\d+')).str.get(0)
-    test.int_rate = test.int_rate.astype(float) # convert to float type 
+    # test.int_rate = test.int_rate.str.findall(re.compile(r'\d+.\d+')).str.get(0)
+    # test.int_rate = test.int_rate.astype(float)
+    
     #########################################################
     # Testing the functions 
     #########################################################
+    
     test.nacolcount()
     test.narowcount()
     test.manymissing(0.5)
@@ -434,6 +454,7 @@ if __name__ == "__main__":
     test.ncol()
     test.detectkey()
     test.findupcol()
+    test.finduprow
     test.dfquantiles(20)
     test.is_date()
     test_wd = test.filterdupcol()
