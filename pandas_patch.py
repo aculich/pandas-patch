@@ -126,7 +126,7 @@ def nearzerovar(self, freq_cut = 95/5, unique_cut = 10, save_metrics = False):
         else:
             freq_ratio += [ float(self[col].value_counts().iloc[0])/self[col].value_counts().iloc[1] ]
     
-    nzv = ((np.array(freq_ratio) >= freq_cut) & (percent_unique <= unique_cut))
+    nzv = ((np.array(freq_ratio) >= freq_cut) & (percent_unique <= unique_cut)) | (percent_unique == 0)
 
     if save_metrics:
         return pd.DataFrame({'percent_unique': percent_unique, 'freq_ratio': freq_ratio, 'nzv': nzv}, index=self.columns)
