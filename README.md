@@ -37,13 +37,15 @@ INSTALLATION
 These is a simple monkey-patch of pandas. So it is simply  dynamic 
 creation of methods for the class Dataframe at runtime.
 
-Step 1
-Clone the project on your local computer.
+ 1. Clone the project on your local computer.
 
-Step 2
-import the methods you want to use on your Dataframe 
-via the pandas_patch.py
+ 2. Import the pandas_patch
 
+ 	* To add tour module your PYTHONPATH
+   		PYTHONPATH="/Me/Documents/mydir:$PYTHONPATH"
+   		export PYTHONPATH
+   		chmod +x /Me/Documents/mydir/code.py
+   	* If you use ipython with spyder use the PYTHONPATH manager
 
 VERSION
 ----------------
@@ -76,5 +78,5 @@ DESIGN DECISIONS
 THANKS 
 ----------------
 
-Thanks to all the creator and contributors of the package we are using 
+Thanks to all the creator and contributors of the package we are using.
 
