@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Created on Sun Jan  4 00:34:33 2015
@@ -165,11 +166,16 @@ pd.DataFrame.is_date = is_date
 
 def structure(self):
     """ this function will return a more complete type summary of variables type
+    to reprogram it is ugly 
     """
     primary_type = test.dtypes
     is_key = self.detectkey(index_format = False)
-    is_date = self.is_date()    
+    is_date = self.is_date()
     
+    return pd.DataFrame(primary_type,is_key,is_date,
+                        columns = ['primary_type','is_key','is_date'])
+
+pd.DataFrame.structure = structure
 
 
 def nearzerovar(self, freq_cut = 95/5, unique_cut = 10, save_metrics = False):
@@ -190,7 +196,7 @@ def nearzerovar(self, freq_cut = 95/5, unique_cut = 10, save_metrics = False):
         else:
             freq_ratio += [ float(self[col].value_counts().iloc[0])/self[col].value_counts().iloc[1] ]
     
-    nzv = ((np.array(freq_ratio) >= freq_cut) & (percent_unique <= unique_cut) >= 1)
+    nzv = ((np.array(freq_ratio) >= freq_cut) & (percent_unique <= unique_cut))| (percent_unique == 0)
 
     if save_metrics:
         return pd.DataFrame({'percent_unique': percent_unique, 'freq_ratio': freq_ratio, 'nzv': nzv}, index=self.columns)
