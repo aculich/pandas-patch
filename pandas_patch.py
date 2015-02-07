@@ -24,6 +24,7 @@ from scipy.stats import t
 import scikits.bootstrap as bootstrap
 import re 
 from dateutil.parser import parse
+from itertools import izip #izip faster than zip 
 
 
 #########################################################
@@ -60,8 +61,8 @@ pd.DataFrame.manymissing = manymissing
 
 def constantcol(self):
     """ identify constant columns """
-    df = self.apply(lambda x: len(x.unique()),axis = 0 )
-    return df[df == 1].index
+    self = self.apply(lambda x: len(x.unique()),axis = 0 )
+    return self[self == 1].index
     
 pd.DataFrame.constantcol = constantcol
 
@@ -91,7 +92,7 @@ def detectkey(self,index_format = True):
         df = self.apply(lambda x: len(x.unique()),axis = 0 )
         return df[df == self.nrow()].index
     else :
-        test.apply(lambda x: len(x.unique()) == len(x) ,axis = 0)
+        return test.apply(lambda x: len(x.unique()) == len(x) ,axis = 0)
 
     
 pd.DataFrame.detectkey = detectkey
@@ -168,12 +169,13 @@ def structure(self):
     """ this function will return a more complete type summary of variables type
     to reprogram it is ugly 
     """
-    primary_type = test.dtypes
+    primary_type = self.dtypes
     is_key = self.detectkey(index_format = False)
     is_date = self.is_date()
     
-    return pd.DataFrame(primary_type,is_key,is_date,
-                        columns = ['primary_type','is_key','is_date'])
+    df = pd.concat([primary_type,is_key,is_date],axis = 1 )
+    df.columns = ['primary_type','is_key','is_date']
+    return df 
 
 pd.DataFrame.structure = structure
 
@@ -395,18 +397,49 @@ def group_average(self,groupvar,measurevar,avg_weight):
 pd.DataFrame.group_average = group_average
 
 
+
+#########################################################
+# Simple outlier detection based on distance 
+#########################################################
+
+# Computing Distance Score 
+
+# We don't take the absolute value of the score by choice 
+
+# We let numpy take care of inf when std = 0 or iqr = 0 
+
+iqr = lambda v: scipy.stats.scoreatpercentile(v,75) - scipy.stats.scoreatpercentile(v,25)
+
+z_score = lambda v: (v - np.mean(v))/(np.std(v))
+
+# More robust to outliers 
+iqr_score = lambda v: (v - np.median(v))/(iqr(v))
+
+# median(abs(v -median(v))/0.6745)
+mad_score = lambda v: (v - np.median(v))/(np.median(np.absolute(v -np.median(v)/0.6745)))
+
 def fivenum(v):
     """ Returns Tukey's five number summary 
     (minimum, lower-hinge, median, upper-hinge, maximum)
     for the input vector, a list or array of numbers 
     based on 1.5 times the interquartile distance """
-    q1 = scipy.stats.scoreatpercentile(v,25)
-    q3 = scipy.stats.scoreatpercentile(v,75)
-    iqd = q3-q1
     md = np.median(v)
-    whisker = 1.5*iqd
+    whisker = 1.5*iqr(v)
     return min(v), md-whisker, md, md+whisker, max(v)
 
+def outlier_detection(self,remove_constant_col = True,
+                      cutoff_zscore = 3,cutoff_iqrscore = 2,cutoff_mad = 2):
+    """ Return a dictionnary with two keys raw_score and outliers """
+    
+    self = self[self.dfnum()] # take only numeric variable 
+    if remove_constant_col:
+        self = self.drop(self.constantcol(), axis = 1) # remove constant variable 
+    
+    scores = [z_score,iqr_score,mad_score]
+    keys = ['z_score','iqr_score','mad_score']
+    return {key : self.apply(func) for key,func in izip(keys,scores)} #optimise with izip for fun use zip instead
+    
+pd.DataFrame.outliers_detection =  outlier_detection
 
 #########################################################
 # Unclassified 
