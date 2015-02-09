@@ -97,6 +97,11 @@ def detectkey(self,index_format = True):
     
 pd.DataFrame.detectkey = detectkey
 
+def df_len_string(self):
+    """ Return a Seriex with the max of the length of the string of string-type columns """
+    return self.drop(self.dfnum(),axis = 1).apply(lambda x : np.max(x.str.len()), axis = 0 )
+
+pd.DataFrame.df_len_string = df_len_string
 
 def findupcol(self):
     """ find duplicated columns and return the result as a list of list
@@ -429,7 +434,8 @@ def fivenum(v):
 
 def outlier_detection(self,remove_constant_col = True,
                       cutoff_zscore = 3,cutoff_iqrscore = 2,cutoff_mad = 2):
-    """ Return a dictionnary with two keys raw_score and outliers """
+    """ Return a dictionnary with z_score,iqr_score,mad_score as keys and the 
+    associate dataframe of distance as value of the dictionnnary"""
     
     self = self[self.dfnum()] # take only numeric variable 
     if remove_constant_col:
