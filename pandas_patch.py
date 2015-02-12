@@ -32,11 +32,20 @@ from itertools import izip #izip faster than zip
 #########################################################
 
 
+def nrow(self):
+    """ return the number of rows
+        This is faster than self.shape[0] """
+    return len(self.index)
+    
+def ncol(self):
+    """ return the number of cols """
+    return self.shape[1]
+
 def nacolcount(self):
     """ count the number of missing values per columns """
     Serie =  self.apply(lambda x: sum(pd.isnull(x)),axis = 0)
     df =  DataFrame(Serie,columns = ['Nanumber'])
-    df['Napercentage'] = df['Nanumber']/(self.shape[0])
+    df['Napercentage'] = df['Nanumber']/(self.nrow())
     return df
 
 pd.DataFrame.nacolcount = nacolcount
@@ -46,7 +55,7 @@ def narowcount(self):
     """ count the number of missing values per rows """
     Serie = self.apply(lambda x: sum(pd.isnull(x)),axis = 1)   
     df =  DataFrame(Serie,columns = ['Nanumber'])
-    df['Napercentage'] = df['Nanumber']/(self.shape[1])
+    df['Napercentage'] = df['Nanumber']/(self.ncol())
     return df
 
 pd.DataFrame.narowcount = narowcount
@@ -67,14 +76,7 @@ def constantcol(self):
 pd.DataFrame.constantcol = constantcol
 
 
-def nrow(self):
-    """ return the number of rows
-        This is faster than self.shape[0] """
-    return len(self.index)
-    
-def ncol(self):
-    """ return the number of cols """
-    return self.shape[1]
+
 
 pd.DataFrame.nrow = nrow
 pd.DataFrame.ncol = ncol
@@ -98,7 +100,7 @@ def detectkey(self,index_format = True):
 pd.DataFrame.detectkey = detectkey
 
 def df_len_string(self):
-    """ Return a Seriex with the max of the length of the string of string-type columns """
+    """ Return a Series with the max of the length of the string of string-type columns """
     return self.drop(self.dfnum(),axis = 1).apply(lambda x : np.max(x.str.len()), axis = 0 )
 
 pd.DataFrame.df_len_string = df_len_string
