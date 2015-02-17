@@ -43,7 +43,7 @@ def ncol(self):
 
 def nacolcount(self):
     """ count the number of missing values per columns """
-    Serie =  self.apply(lambda x: sum(pd.isnull(x)),axis = 0)
+    Serie =  self.isnull().sum()
     df =  DataFrame(Serie,columns = ['Nanumber'])
     df['Napercentage'] = df['Nanumber']/(self.nrow())
     return df
@@ -53,7 +53,7 @@ pd.DataFrame.nacolcount = nacolcount
     
 def narowcount(self):
     """ count the number of missing values per rows """
-    Serie = self.apply(lambda x: sum(pd.isnull(x)),axis = 1)   
+    Serie = self.isnull().sum(axis = 1)
     df =  DataFrame(Serie,columns = ['Nanumber'])
     df['Napercentage'] = df['Nanumber']/(self.ncol())
     return df
@@ -398,7 +398,7 @@ pd.DataFrame.groupsummaryscc = groupsummaryscc
 def group_average(self,groupvar,measurevar,avg_weight):
     """ return an weighted ( the weight are given by avg_weight) mean 
     of the variable measurevar group by groupvar """
-    get_wavg = lambda df: np.average(a = df[measurevar], weights = df[avg_weight])
+    get_wavg = lambda df: np.average(a = df[measurevar], weights = df[avg_weight], axis = 0 )
     return self.groupby(groupvar).apply(get_wavg)
 
 pd.DataFrame.group_average = group_average
@@ -448,6 +448,10 @@ def outlier_detection(self,remove_constant_col = True,
     return {key : self.apply(func) for key,func in izip(keys,scores)} #optimise with izip for fun use zip instead
     
 pd.DataFrame.outliers_detection =  outlier_detection
+
+#########################################################
+# Time Series Analysis 
+#########################################################
 
 #########################################################
 # Unclassified 
