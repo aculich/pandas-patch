@@ -41,6 +41,9 @@ def ncol(self):
     """ return the number of cols """
     return self.shape[1]
 
+pd.DataFrame.nrow = nrow
+pd.DataFrame.ncol = ncol
+
 def nacolcount(self):
     """ count the number of missing values per columns """
     Serie =  self.isnull().sum()
@@ -61,10 +64,15 @@ def narowcount(self):
 pd.DataFrame.narowcount = narowcount
 
 
-def manymissing(self,a):
-    """ identify columns of a dataframe with many missing values ( >= a) """
-    df = self.nacolcount()
-    return df[df['Napercentage'] >= a].index
+def manymissing(self,a,row = False):
+    """ identify columns of a dataframe with many missing values ( >= a), if 
+    row = False row either
+    - the output is a pandas index """
+    if row:
+        self = self.narowcount()
+    else :
+        self = self.nacolcount()
+    return self[self['Napercentage'] >= a].index
     
 pd.DataFrame.manymissing = manymissing
 
@@ -76,10 +84,6 @@ def constantcol(self):
 pd.DataFrame.constantcol = constantcol
 
 
-
-
-pd.DataFrame.nrow = nrow
-pd.DataFrame.ncol = ncol
 
 def dfnum(self):
     """ select columns with numeric type, the output is a list of columns  """
@@ -108,12 +112,12 @@ pd.DataFrame.df_len_string = df_len_string
 def findupcol(self):
     """ find duplicated columns and return the result as a list of list
     Function to correct , working but bad coding """
-    dup_index = self.T.duplicated() 
-    dup_columns = self.columns[dup_index]
+    dup_index= self.T.duplicated()
+    dup_index_complet = (dup_index) | (self.T.duplicated(take_last = True))
     l = []
-    for col in dup_columns:
-        index_temp = self.apply(lambda x: (x == self[col])).apply(lambda x:sum(x) == self.nrow())
-        temp = list(self.columns[index_temp])
+    for col in self.columns[dup_index]:
+        index_temp = self.loc[:,dup_index_complet].apply(lambda x: (x == self[col])).sum() == self.nrow()
+        temp = list(self.loc[:,dup_index_complet].columns[index_temp])
         l.append(temp)
     return l
 
