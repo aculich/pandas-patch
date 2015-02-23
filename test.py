@@ -39,8 +39,12 @@ class TestPandasPatch(unittest.TestCase):
         self.constantcol = self.df_one.constantcol()
         self.dfnum = self.df_one.dfnum()
         self.detectkey = self.df_one.detectkey()
-        self.findupcol = flatten_list(self.df_one.findupcol())
-    
+        self.findupcol = self.df_one.findupcol()
+        
+    def test_sample_df(self):
+        self.assertEqual(len(self.df_one.sample_df(pct = 0.061)),
+                         0.061 * float(self.df_one.shape[0]))
+
     def test_nrow(self):
         self.assertEqual(self.df_one.nrow(),self.df_one.shape[0])
     
@@ -76,9 +80,9 @@ class TestPandasPatch(unittest.TestCase):
         self.assertIn('id', self.detectkey)
     
     def test_findupcol_check(self):
-        self.assertIn('duplicated_column',self.findupcol)
-        self.assertIn('id',self.findupcol)
-        self.assertNotIn('url',self.findupcol)
+        self.assertIn(['loan_amnt', 'funded_amnt'],self.findupcol)
+        self.assertIn(['id', 'duplicated_column'],self.findupcol)
+        self.assertNotIn('member_id',flatten_list(self.findupcol))
 
     def tearDown(self):
         """ Cleaning the environnement """

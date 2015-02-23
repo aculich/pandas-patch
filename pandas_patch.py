@@ -9,7 +9,10 @@ Purpose : the puropose of this modest patch is to create some new methods for
 the class Dataframe in order to simplify a data scientist life.
 The module is designed as a monkey patch so just import it before starting your 
 analysis.
-It is providing multiple simple methods for the class dataframe 
+It is providing multiple simple methods for the class dataframe
+
+run "python -m unittest -v test" in the module directory to run the tests 
+ 
 """
 #########################################################
 # Import modules 
@@ -25,13 +28,26 @@ import scikits.bootstrap as bootstrap
 import re 
 from dateutil.parser import parse
 from itertools import izip #izip faster than zip 
+from numpy.random import permutation
+
+#########################################################
+# Private Helpers 
+#########################################################
 
 
+# Find a better way to do it ( core pandas implementation)
+cserie= lambda serie: serie[serie].index
+    
 #########################################################
 # Data cleaning and exploration helpers 
 #########################################################
 
+def sample_df(self,pct = 0.05,nr = 10):
+    a = max(int(pct*float(len(self.index))),nr)
+    return self.loc[permutation(self.index)[:a]]
 
+pd.DataFrame.sample_df = sample_df
+    
 def nrow(self):
     """ return the number of rows
         This is faster than self.shape[0] """
@@ -78,8 +94,10 @@ pd.DataFrame.manymissing = manymissing
 
 def constantcol(self):
     """ identify constant columns """
-    self = self.apply(lambda x: len(x.unique()),axis = 0 )
-    return self[self == 1].index
+    # sample to reduce computation time 
+    col_to_keep = self.sample_df().apply(lambda x: len(x.unique()) == 1,axis = 0 )
+    self = self.loc[:,col_to_keep]
+    return cserie(self.apply(lambda x: len(x.unique()) == 1,axis = 0 ))
     
 pd.DataFrame.constantcol = constantcol
 
@@ -91,14 +109,14 @@ def dfnum(self):
 
 pd.DataFrame.dfnum = dfnum 
 
-def detectkey(self,index_format = True):
+def detectkey(self, index_format = True, pct = 0.15):
     """ identify id or key columns as an index if index_format = True or 
     as a Serie if index_format = False """
+    col_to_keep = self.sample_df(pct = 0.15).apply(lambda x: len(x.unique()) == len(x) ,axis = 0)
     if index_format:
-        df = self.apply(lambda x: len(x.unique()),axis = 0 )
-        return df[df == self.nrow()].index
+        return cserie(self.loc[:,col_to_keep].apply(lambda x: len(x.unique()) == len(x) ,axis = 0))
     else :
-        return test.apply(lambda x: len(x.unique()) == len(x) ,axis = 0)
+        return self.loc[:,col_to_keep].apply(lambda x: len(x.unique()) == len(x) ,axis = 0)
 
     
 pd.DataFrame.detectkey = detectkey
@@ -112,7 +130,7 @@ pd.DataFrame.df_len_string = df_len_string
 def findupcol(self):
     """ find duplicated columns and return the result as a list of list
     Function to correct , working but bad coding """
-    dup_index= self.T.duplicated()
+    dup_index = self.T.duplicated()
     dup_index_complet = (dup_index) | (self.T.duplicated(take_last = True))
     l = []
     for col in self.columns[dup_index]:
@@ -452,6 +470,19 @@ def outlier_detection(self,remove_constant_col = True,
     return {key : self.apply(func) for key,func in izip(keys,scores)} #optimise with izip for fun use zip instead
     
 pd.DataFrame.outliers_detection =  outlier_detection
+
+#########################################################
+# Global summary and basic cleaning function  
+#########################################################
+
+def gsummary(self):
+    """ This function will print you a summary of the dataset, based on function 
+    designed is this package 
+    - Argument : pandas.Dataframe
+    - Output : python print 
+    """
+    print 
+    
 
 #########################################################
 # Time Series Analysis 
