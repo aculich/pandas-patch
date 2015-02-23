@@ -248,36 +248,33 @@ def findcorr(self, cutoff=.90, method='pearson', data_frame=False):
         will return a dataframe is 'data_frame' is set to True, and the list
         of predictors to remove otherwise.
 
-        Adaptation of 'findCorrelation' function in the caret package in R
-    """
+        Adaptation of 'findCorrelation' function in the caret package in R. """
     res = []
-    temp = self
-        
-    cor = temp.corr(method=method)
-    # pandas doesn't give a value for diagonal cells
+
+    cor = df.corr(method=method)
     for col in cor.columns:
         cor[col][col] = 0
     
     max_cor = cor.max()
+    print (max_cor.max())
     while max_cor.max() > cutoff:            
         A = max_cor.idxmax()
         B = cor[A].idxmax()
         
         if cor[A].mean() > cor[B].mean():
-            temp = temp.drop(A, 1)
+            cor.drop(A, 1, inplace = True)
+            cor.drop(A, 0, inplace = True)
             res += [A]
         else:
-            temp = temp.drop(B, 1)
+            cor.drop(B, 1, inplace = True)
+            cor.drop(B, 0, inplace = True)
             res += [B]
-            
-        cor = temp.corr(method=method)
-        for col in cor.columns:
-            cor[col][col] = 0
-    
+        
         max_cor = cor.max()
+        print (max_cor.max())
         
     if data_frame:
-        return temp
+        return self.drop(res, 1)
     else:
         return res
 
