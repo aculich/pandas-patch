@@ -219,20 +219,21 @@ def nearzerovar(self, freq_cut = 95/5, unique_cut = 10, save_metrics = False):
             col indexes, if True, returns the whole dataframe.
     """
 
-    percent_unique = self.apply(lambda x: 100*len(x.unique())/len(x), axis=0)
+    percent_unique = self.apply(lambda x: float(100*len(x.unique()))/len(x), axis=0)
     freq_ratio = []
     for col in self.columns:
         if len(self[col].unique()) == 1:
             freq_ratio += [1]
         else:
             freq_ratio += [ float(self[col].value_counts().iloc[0])/self[col].value_counts().iloc[1] ]
-    
-    nzv = ((np.array(freq_ratio) >= freq_cut) & (percent_unique <= unique_cut))| (percent_unique == 0)
+
+    zerovar = self.apply(lambda x: len(x.unique()) == 1, axis=0)
+    nzv = ((np.array(freq_ratio) >= freq_cut) & (percent_unique <= unique_cut)) | (percent_unique == 0)
 
     if save_metrics:
-        return pd.DataFrame({'percent_unique': percent_unique, 'freq_ratio': freq_ratio, 'nzv': nzv}, index=self.columns)
+        return pd.DataFrame({'percent_unique': percent_unique, 'freq_ratio': freq_ratio, 'zero_var': zerovar, 'nzv': nzv}, index=self.columns)
     else:
-        print(pd.DataFrame({'percent_unique': percent_unique, 'freq_ratio': freq_ratio, 'nzv': nzv}, index=self.columns))
+        print(pd.DataFrame({'percent_unique': percent_unique, 'freq_ratio': freq_ratio, 'zero_var': zerovar, 'nzv': nzv}, index=self.columns))
         return nzv[nzv == True].index 
 
 pd.DataFrame.nearzerovar = nearzerovar
