@@ -12,6 +12,8 @@ analysis.
 It is providing multiple simple methods for the class dataframe
 
 run "python -m unittest -v test" in the module directory to run the tests 
+
+Note : don't use inplace = True inside monkey patching ...
  
 """
 #########################################################
@@ -36,7 +38,8 @@ from numpy.random import permutation
 
 
 # Find a better way to do it ( core pandas implementation)
-cserie= lambda serie: serie[serie].index
+# cserie return the column name with bool = True for a Serie of boolean 
+cserie = lambda serie: serie[serie].index
     
 #########################################################
 # Data cleaning and exploration helpers 
@@ -176,8 +179,8 @@ def dfquantiles(self,nb_quantiles = 10,only_numeric = True):
     
 pd.DataFrame.dfquantiles = dfquantiles
 
-def is_date(self):
-    """ to reprogram it is ugly """ 
+def is_date(self,exclude_numver):
+    """ to reprogram it is ugly """
     d = {}
     for col in self.columns:
         try :
@@ -225,9 +228,9 @@ def nearzerovar(self, freq_cut = 95/5, unique_cut = 10, save_metrics = False):
         if len(self[col].unique()) == 1:
             freq_ratio += [1]
         else:
-            freq_ratio += [ float(self[col].value_counts().iloc[0])/self[col].value_counts().iloc[1] ]
+            freq_ratio += [float(self[col].value_counts().iloc[0])/self[col].value_counts().iloc[1] ]
 
-    zerovar = self.apply(lambda x: len(x.unique()) == 1, axis=0)
+    zerovar = self.apply(lambda x: len(x.unique()) == 1, axis = 0)
     nzv = ((np.array(freq_ratio) >= freq_cut) & (percent_unique <= unique_cut)) | (percent_unique == 0)
 
     if save_metrics:
@@ -252,7 +255,7 @@ def findcorr(self, cutoff=.90, method='pearson', data_frame=False):
         Adaptation of 'findCorrelation' function in the caret package in R. """
     res = []
 
-    cor = df.corr(method=method)
+    cor = self.corr(method=method)
     for col in cor.columns:
         cor[col][col] = 0
     
@@ -473,18 +476,32 @@ pd.DataFrame.outliers_detection =  outlier_detection
 # Global summary and basic cleaning function  
 #########################################################
 
-def psummary(self,manymissing_p = 0.70):
+def psummary(self,manymissing_p = 0.70,nzv_freq_cut = 95/5, nzv_unique_cut = 10):
     """ This function will print you a summary of the dataset, based on function 
     designed is this package 
     - Argument : pandas.Dataframe
     - Output : python print 
     """
-    print 'the columns with more than {0,2}% manymissing values:\n{1} \n'.format(100 * manymissing_p,
+    print 'the columns with more than {0}% manymissing values:\n{1} \n'.format(100 * manymissing_p,
 list(self.manymissing(manymissing_p)))
-    print 'the keys of the dataset are:\n{0} \n'.format(list(self.detectkey()))
+    print 'the detected keys of the dataset are:\n{0} \n'.format(list(self.detectkey()))
     print 'the duplicated columns of the dataset are:\n{0}\n'.format(self.findupcol())
-    print 'the constant columns of the dataset are:\n{0}'.format(list(self.constantcol()))
+    print 'the constant columns of the dataset are:\n{0}\n'.format(list(self.constantcol()))
+    print 'the columns with nearzerovariance are:\n{0}'.format(
+    list(cserie(self.nearzerovar(nzv_freq_cut,nzv_unique_cut,save_metrics =True).nzv)))
 pd.DataFrame.psummary = psummary
+
+def clean_df(self,manymissing_p = 0.9,filter_dupcol = True,filter_constantcol = True):
+    if manymissing_p:
+        self = self.drop(self.manymissing(manymissing_p) ,axis = 1)
+    if filterdupcol:
+        self = self.filterdupcol()
+    if filter_constantcol:
+        self = self.drop(self.constantcol(), axis = 1)
+    return self 
+
+pd.DataFrame.clean_df = clean_df   
+        
 #########################################################
 # Time Series Analysis 
 #########################################################

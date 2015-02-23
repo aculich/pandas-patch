@@ -40,6 +40,7 @@ class TestPandasPatch(unittest.TestCase):
         self.dfnum = self.df_one.dfnum()
         self.detectkey = self.df_one.detectkey()
         self.findupcol = self.df_one.findupcol()
+        self.clean_df = self.df_one.clean_df().columns
         
     def test_sample_df(self):
         self.assertEqual(len(self.df_one.sample_df(pct = 0.061)),
@@ -83,6 +84,11 @@ class TestPandasPatch(unittest.TestCase):
         self.assertIn(['loan_amnt', 'funded_amnt'],self.findupcol)
         self.assertIn(['id', 'duplicated_column'],self.findupcol)
         self.assertNotIn('member_id',flatten_list(self.findupcol))
+        
+    def test_clean_df(self):
+        self.assertTrue(all([e not in self.clean_df for e in ['constant_col',
+                            'na_col','duplicated_column']]))
+        self.assertIn('id',self.clean_df)
 
     def tearDown(self):
         """ Cleaning the environnement """
