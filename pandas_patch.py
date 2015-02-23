@@ -475,15 +475,18 @@ pd.DataFrame.outliers_detection =  outlier_detection
 # Global summary and basic cleaning function  
 #########################################################
 
-def gsummary(self):
+def psummary(self,manymissing_p = 0.70):
     """ This function will print you a summary of the dataset, based on function 
     designed is this package 
     - Argument : pandas.Dataframe
     - Output : python print 
     """
-    print 
-    
-
+    print 'the columns with more than {0,2}% manymissing values:\n{1} \n'.format(100 * manymissing_p,
+list(self.manymissing(manymissing_p)))
+    print 'the keys of the dataset are:\n{0} \n'.format(list(self.detectkey()))
+    print 'the duplicated columns of the dataset are:\n{0}\n'.format(self.findupcol())
+    print 'the constant columns of the dataset are:\n{0}'.format(list(self.constantcol()))
+pd.DataFrame.psummary = psummary
 #########################################################
 # Time Series Analysis 
 #########################################################
