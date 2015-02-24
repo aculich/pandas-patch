@@ -102,4 +102,4 @@ class TestPandasPatch(unittest.TestCase):
 #unittest.TextTestRunner(verbosity = 1 ).run(suite)
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(exit =  False)
