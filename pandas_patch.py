@@ -563,19 +563,6 @@ pd.DataFrame.clean_df = clean_df
 # Unclassified 
 #########################################################
 
-def melt_p(self, id_variable, value_name = "value",variable_name = "variable"):
-    """ This function is used to melt a dataframe, what means transform a 
-    long dataframe into a wide dataframe (like sql table with key type)
-    id_variable has to be a list of columns 
-    """
-    df = self.copy()
-    df = df.set_index(id_variable)
-    df = df.stack()
-    df = df.reset_index()
-    df.columns = id_variable + [variable_name] + [value_name]
-    return df
-
-pd.DataFrame.melt_p = melt_p
 
 def info(object, spacing=10, collapse=1):
     """Print methods and doc strings.
