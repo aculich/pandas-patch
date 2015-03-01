@@ -31,6 +31,7 @@ import re
 from dateutil.parser import parse
 from itertools import izip #izip faster than zip 
 from numpy.random import permutation
+from ggplot import *
 
 #########################################################
 # Private Helpers 
@@ -331,8 +332,24 @@ pd.DataFrame.detailledsummary = detailledsummary
 
 
 #########################################################
-# Data grouped summary helpers 
+# Data grouped summary helpers
 #########################################################
+
+
+# Helpers for groupsummary function
+def se(x):
+    return x.std() / np.sqrt(len(x))
+    # creating the list of functions 
+def quantile_25(x):
+    return x.quantile(0.25)
+def quantile_75(x):
+    return x.quantile(0.75)
+def skewness(x):
+    return x.skew()
+def kurtosis(x):
+    return x.kurt()
+
+# Be careful all groupsummary return a dataframe with a MultiIndex structure
 
 def groupsummarys(self,groupvar,measurevar):
     """ provide a summary of measurevar groupby groupvar. measurevar and 
@@ -356,22 +373,21 @@ def groupsummaryd(self,groupvar,measurevar):
 pd.DataFrame.groupsummaryd = groupsummaryd
 
 
-def groupsummarysc(self,groupvar,measurevar,confint=0.95,id_group= True,
-                   cut = False, quantile = 5,is_bucket = False,**kwarg):
+def groupsummarysc(self,groupvar,measurevar,confint=0.95,cut = False, 
+    quantile = 5,is_bucket = False,**kwargs):
     """ provide a summary of measurevar groupby groupvar with student conf interval.
     measurevar and groupvar are list of column names
     if you want bucket of equal length instead of quantile put is_bucket = True """
-    def se(x):
-        return x.std() / np.sqrt(len(x))
- 
     def student_ci(x):
-        return se(x) * scipy.stats.t.interval(confint, len(x) - 1,**kwarg)[1]
-    functions = ['count','min','mean',se,student_ci,'median','std','max']
+        return se(x) * scipy.stats.t.interval(confint, len(x) - 1,**kwargs)[1]
+
+    functions = ['count','min',('ci_low',lambda x: np.mean(x) - student_ci(x)),
+     'mean',('ci_up',lambda x: np.mean(x) + student_ci(x)),'median',('se',se),'std','max']
     col = measurevar + groupvar 
     df = self[col]
     if cut == True:
         for var in groupvar:
-            if id_group == True:
+            if if_bucket == False:
                 df[var] = pd.cut(df[var],bins = quantile)
             else: 
                 df[var] = pd.qcut(df[var],q = quantile)
@@ -381,23 +397,23 @@ pd.DataFrame.groupsummarysc = groupsummarysc
 
 
 def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
-                   cut = False, quantile = 5,is_bucket = False, **kwarg):
+                   cut = False, quantile = 5,is_bucket = False, **kwargs):
     """ provide a summary of measurevar groupby groupvar with bootstrap conf interval.
     measurevar and groupvar are list of column names. You have a cut functionnality 
     if you want to cut the groupvar
     if you want bucket of equal length instead of quantile put is_bucket = True """
-    def ci_inf(x):
+    def ci_low(x):
         return bootstrap.ci(data=x, statfunction=scipy.mean, alpha = confint,
-                            n_samples = nsamples,**kwarg)[0]
+                        n_samples = nsamples,**kwargs)[0]
     def ci_up(x):
         return bootstrap.ci(data=x, statfunction=scipy.mean, alpha = confint,
-                            n_samples = nsamples,**kwarg)[1]
-        
-    functions = ['count','min',ci_inf,'mean',ci_up,'median','std','max']
+                    n_samples = nsamples,**kwargs)[1]
+
+    functions = ['count','min',ci_low,'mean',ci_up,'median','std','max']
     col = measurevar + groupvar 
     df = self[col]
     if cut == True:
-        for var in groupvar:
+        for var in groupvar:()
             if is_bucket == True:
                 df[var] = pd.cut(df[var],bins = quantile)
             else: 
@@ -408,25 +424,14 @@ pd.DataFrame.groupsummarybc = groupsummarybc
 
 
 def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
-                   cut = False, quantile = 5,is_bucket = False, **kwarg):
+                   cut = False, quantile = 5,is_bucket = False, **kwargs):
     """ provide a more complete summary than groupsummarysc of measurevar
     groupby groupvar with student conf interval.measurevar and groupvar
     are list of column names 
     if you want bucket of equal length instead of quantile put is_bucket = True """
-    
-    # creating the list of functions 
-    def se(x):
-        return x.std() / np.sqrt(len(x))
     def student_ci(x):
-        return se(x) * scipy.stats.t.interval(confint, len(x) - 1,**kwarg)[1]
-    def quantile_25(x):
-        return x.quantile(0.25)
-    def quantile_75(x):
-        return x.quantile(0.75)
-    def skewness(x):
-        return x.skew()
-    def kurtosis(x):
-        return x.kurt()
+        return se(x) * scipy.stats.t.interval(confint, len(x) - 1,**kwargs)[1]
+
     functions = ['count','min', quantile_25,'mean',se,student_ci,
     'median','std','mad',skewness ,kurtosis,quantile_75,'max']
     col = measurevar + groupvar 
@@ -444,6 +449,27 @@ def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
     
 pd.DataFrame.groupsummaryscc = groupsummaryscc
 
+
+# This is the global function that the user will be using 
+def groupsummary(self,groupvar,measurevar,confint=0.95,fast_summary =False,
+                detailled_summary = False,boostrap = False,
+                   cut = False, quantile = 5,is_bucket = False, **kwargs):
+    col = measurevar + groupvar 
+    df = self[col]
+    if fast_summary:
+        return df.groupby(groupvar).agg(['count','min','mean','median','std','max'])
+    elif functions_detailled:
+        return self.groupsummaryscc(groupvar,measurevar,confint,
+                   cut,is_bucket, **kwargs)
+    elif boostrap:
+        return self.groupsummarybc(groupvar,measurevar,confint,nsamples,
+                   cut, quantile,is_bucket, **kwargs)
+    else:
+        return self.groupsummarysc(groupvar,measurevar,confint,cut, 
+    quantile,is_bucket ,**kwargs)
+
+
+pd.Dataframe.groupsummary = groupsummary
 
 def group_average(self,groupvar,measurevar,avg_weight):
     """ return an weighted ( the weight are given by avg_weight) mean 
@@ -537,7 +563,7 @@ pd.DataFrame.clean_df = clean_df
 # Unclassified 
 #########################################################
 
-def melt(self, id_variable, value_name = "value",variable_name = "variable"):
+def melt_p(self, id_variable, value_name = "value",variable_name = "variable"):
     """ This function is used to melt a dataframe, what means transform a 
     long dataframe into a wide dataframe (like sql table with key type)
     id_variable has to be a list of columns 
@@ -549,7 +575,7 @@ def melt(self, id_variable, value_name = "value",variable_name = "variable"):
     df.columns = id_variable + [variable_name] + [value_name]
     return df
 
-pd.DataFrame.melt = melt
+pd.DataFrame.melt_p = melt_p
 
 def info(object, spacing=10, collapse=1):
     """Print methods and doc strings.
