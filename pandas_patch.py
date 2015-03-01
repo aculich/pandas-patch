@@ -104,7 +104,18 @@ def constantcol(self):
     
 pd.DataFrame.constantcol = constantcol
 
+def constantcol2(self):
+    def helper(x):
+        unique_value = set()
+        for e in x:
+            if len(unique_value) > 1:
+                return False
+            else:
+                unique_value.add(e)
+        return True
+    return cserie(self.apply(lambda x: helper(x)))
 
+pd.DataFrame.constantcol2 = constantcol2
 
 def dfnum(self):
     """ select columns with numeric type, the output is a list of columns  """
@@ -123,6 +134,22 @@ def detectkey(self, index_format = True, pct = 0.15):
 
     
 pd.DataFrame.detectkey = detectkey
+
+def detectkey2(self):
+    def helper(x):
+        unique_value = set()
+        for index,e in enumerate(x):
+            if len(unique_value) < index :
+                return False
+            else:
+                unique_value.add(e)
+        return True
+    return cserie(self.apply(lambda x: helper(x)))
+
+pd.DataFrame.detectkey2 = detectkey2
+
+
+
 
 def df_len_string(self):
     """ Return a Series with the max of the length of the string of string-type columns """
@@ -385,7 +412,7 @@ def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
     """ provide a more complete summary than groupsummarysc of measurevar
     groupby groupvar with student conf interval.measurevar and groupvar
     are list of column names 
-    if you want bucket of equal length instead of quagit ntile put is_bucket = True """
+    if you want bucket of equal length instead of quantile put is_bucket = True """
     
     # creating the list of functions 
     def se(x):
@@ -560,7 +587,6 @@ if __name__ == "__main__":
     test.findupcol()
     test.finduprow
     test.dfquantiles(20)
-    test.is_date()
     test_wd = test.filterdupcol()
     test_wd.findupcol()
     test.nearzerovar()
