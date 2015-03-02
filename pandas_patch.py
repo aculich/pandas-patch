@@ -31,7 +31,13 @@ import re
 from dateutil.parser import parse
 from itertools import izip #izip faster than zip 
 from numpy.random import permutation
+
+# Graph with ggplot 
 from ggplot import *
+
+# Graphs with rpy2 
+import pandas.rpy.common as com
+from rpy2.robjects.lib.ggplot2 import * 
 
 #########################################################
 # Private Helpers 
@@ -354,10 +360,9 @@ def kurtosis(x):
 def groupsummarys(self,groupvar,measurevar):
     """ provide a summary of measurevar groupby groupvar. measurevar and 
     groupvar are list of column names. this function is optimized for speed """
+    self = self.copy()
     functions = ['count','min','mean','median','std','max']
-    col = measurevar + groupvar 
-    df = self[col]
-    return df.groupby(groupvar).agg(functions)
+    return self.groupby(groupvar)[measurevar].agg(functions)
 
 pd.DataFrame.groupsummarys = groupsummarys
 
@@ -366,9 +371,8 @@ pd.DataFrame.groupsummarys = groupsummarys
 def groupsummaryd(self,groupvar,measurevar):
     """ provide a summary of measurevar groupby groupvar with describe helper.
     measurevar and groupvar are list of column names """
-    col = measurevar + groupvar 
-    df = self[col]
-    return df.groupby(groupvar).describe()
+    self = self.copy()
+    return self.groupby(groupvar)[measurevar].describe()
 
 pd.DataFrame.groupsummaryd = groupsummaryd
 
@@ -380,18 +384,16 @@ def groupsummarysc(self,groupvar,measurevar,confint=0.95,cut = False,
     if you want bucket of equal length instead of quantile put is_bucket = True """
     def student_ci(x):
         return se(x) * scipy.stats.t.interval(confint, len(x) - 1,**kwargs)[1]
-
+    self = self.copy()
     functions = ['count','min',('ci_low',lambda x: np.mean(x) - student_ci(x)),
      'mean',('ci_up',lambda x: np.mean(x) + student_ci(x)),'median',('se',se),'std','max']
-    col = measurevar + groupvar 
-    df = self[col]
     if cut == True:
         for var in groupvar:
             if if_bucket == False:
-                df[var] = pd.cut(df[var],bins = quantile)
+                self[var] = pd.cut(self[var],bins = quantile)
             else: 
-                df[var] = pd.qcut(df[var],q = quantile)
-    return df.groupby(groupvar).agg(functions)
+                self[var] = pd.qcut(self[var],q = quantile)
+    return self.groupby(groupvar)[measurevar].agg(functions)
 
 pd.DataFrame.groupsummarysc = groupsummarysc
 
@@ -408,17 +410,15 @@ def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
     def ci_up(x):
         return bootstrap.ci(data=x, statfunction=scipy.mean, alpha = confint,
                     n_samples = nsamples,**kwargs)[1]
-
+    self = self.copy()
     functions = ['count','min',ci_low,'mean',ci_up,'median','std','max']
-    col = measurevar + groupvar 
-    df = self[col]
     if cut == True:
-        for var in groupvar:()
+        for var in groupvar:
             if is_bucket == True:
-                df[var] = pd.cut(df[var],bins = quantile)
+                self[var] = pd.cut(self[var],bins = quantile)
             else: 
-                df[var] = pd.qcut(df[var],q = quantile)
-    return df.groupby(groupvar).agg(functions)
+                self[var] = pd.qcut(self[var],q = quantile)
+    return self.groupby(groupvar)[measurevar].agg(functions)
 
 pd.DataFrame.groupsummarybc = groupsummarybc
 
@@ -431,21 +431,19 @@ def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
     if you want bucket of equal length instead of quantile put is_bucket = True """
     def student_ci(x):
         return se(x) * scipy.stats.t.interval(confint, len(x) - 1,**kwargs)[1]
-
+    self = self.copy()
     functions = ['count','min', quantile_25,'mean',se,student_ci,
     'median','std','mad',skewness ,kurtosis,quantile_75,'max']
-    col = measurevar + groupvar 
-    df = self[col]
     # Correct the problem of unicity 
     if cut == True:
         for var in groupvar:
             if is_bucket == True:
-                df.loc[:,var] = pd.cut(df.loc[:,var],bins = quantile)
+                self.loc[:,var] = pd.cut(self.loc[:,var],bins = quantile)
             else: 
-                df.loc[:,var] = pd.qcut(df.loc[:,var],q = quantile)
+                self.loc[:,var] = pd.qcut(self.loc[:,var],q = quantile)
             
     # grouping, apply function and return results 
-    return df.groupby(groupvar).agg(functions)
+    return self.groupby(groupvar)[measurevar].agg(functions)
     
 pd.DataFrame.groupsummaryscc = groupsummaryscc
 
@@ -453,33 +451,100 @@ pd.DataFrame.groupsummaryscc = groupsummaryscc
 # This is the global function that the user will be using 
 def groupsummary(self,groupvar,measurevar,confint=0.95,fast_summary =False,
                 detailled_summary = False,boostrap = False,
-                   cut = False, quantile = 5,is_bucket = False, **kwargs):
-    col = measurevar + groupvar 
-    df = self[col]
+                   cut = False, quantile = 5,is_bucket = False,group_keys = False,**kwargs):
+    self = self.copy()
     if fast_summary:
-        return df.groupby(groupvar).agg(['count','min','mean','median','std','max'])
-    elif functions_detailled:
+        return self.groupby(groupvar)[measurevar].agg(['count','min','mean','median','std','max'])
+    if functions_detailled:
         return self.groupsummaryscc(groupvar,measurevar,confint,
-                   cut,is_bucket, **kwargs)
-    elif boostrap:
+                   cut,is_bucket,group_keys,**kwargs)
+    if boostrap:
         return self.groupsummarybc(groupvar,measurevar,confint,nsamples,
                    cut, quantile,is_bucket, **kwargs)
-    else:
-        return self.groupsummarysc(groupvar,measurevar,confint,cut, 
+    return self.groupsummarysc(groupvar,measurevar,confint,cut, 
     quantile,is_bucket ,**kwargs)
 
 
-pd.Dataframe.groupsummary = groupsummary
+pd.DataFrame.groupsummary = groupsummary
 
 def group_average(self,groupvar,measurevar,avg_weight):
     """ return an weighted ( the weight are given by avg_weight) mean 
     of the variable measurevar group by groupvar """
-    get_wavg = lambda df: np.average(a = df[measurevar], weights = df[avg_weight], axis = 0 )
+    get_wavg = lambda self: np.average(a = self[measurevar], weights = self[avg_weight], axis = 0 )
     return self.groupby(groupvar).apply(get_wavg)
 
 pd.DataFrame.group_average = group_average
 
+#########################################################
+# Plots with ggplot package  
+#########################################################
 
+
+def hist_helper(self,groupvar,measurevar,pmeasurevar = 'mean',
+    mean_global = 0,color_fill ="cornsilk",title ='Histogram',name_mvar = 'Measure',**kwargs):
+    """ This is a helper to plot ggplot2 style histogram with confidence 
+    errorbar and global mean. It is designed to be use after a groupsummary
+    - measurevar has to be a string
+    - groupvar has to be a string  """
+    if not isinstance(measurevar, str) & isinstance(groupvar, str):
+        raise(TypeError) 
+    df = self.groupsummarysc(groupvar,measurevar,confint=0.95,cut = False, 
+    quantile = 5,is_bucket = False,**kwargs)
+    if len(df.columns)==1 :
+        df = df[measurevar]
+    df.reset_index(level = 0, inplace = True)
+    print ggplot(df, aes(x = groupvar, y = pmeasurevar)) + \
+    geom_bar(stat='identity',fill=color_fill , size=.2) + \
+    ylab(name_mvar)+ \
+    geom_hline(aes(yintercept=mean_global),linetype="dashed", size=1, color="red")+ \
+    ggtitle(title)
+
+pd.DataFrame.hist_helper = hist_helper
+
+
+def hist_helper_rpy2(self,groupvar,measurevar,pmeasurevar = 'mean',
+    mean_global = 0,color_fill ="cornsilk",title ='Histogram',
+    name_mvar = 'Measure',factor = True, **kwargs):
+    """ This is a helper to plot ggplot2 style histogram with confidence 
+    errorbar and global mean. It is designed to be use after a groupsummary
+    - measurevar has to be a string
+    - groupvar has to be a string  """
+    if not isinstance(measurevar, str) & isinstance(groupvar, str):
+        raise(TypeError) 
+    df = self.groupsummarysc(groupvar,measurevar,confint=0.95,cut = False, 
+    quantile = 5,is_bucket = False,**kwargs)
+    if len(df.columns)==1 :
+        df = df[measurevar]
+    df.reset_index(level = 0, inplace = True)
+    df_r = com.convert_to_r_dataframe(df)
+    if factor:
+        groupvar = 'factor(' + groupvar + ')'
+        p = ggplot(df_r) + \
+        aes_string(x = groupvar, y = pmeasurevar) + \
+        geom_bar(stat='identity',fill=color_fill , size=.2) + \
+        geom_errorbar(aes_string(ymin='ci_low', ymax='ci_up'),position=position_dodge(0.9), width=.2) + \
+        ylab(name_mvar)+ \
+        geom_hline(aes_string(yintercept=int(mean_global)),linetype="dashed", size=1, color="red")+ \
+        ggtitle(title)
+    else :
+        p = ggplot(df_r) + \
+        aes_string(x = groupvar, y = pmeasurevar) + \
+        geom_histogram(stat='identity',fill=color_fill , size=.2) + \
+        geom_errorbar(aes_string(ymin='ci_low', ymax='ci_up'),position=position_dodge(0.9), width=.2) + \
+        ylab(name_mvar)+ \
+        geom_hline(aes_string(yintercept=mean_global),linetype="dashed", size=1, color="red")+ \
+        ggtitle(title)
+
+    p.plot()
+
+# p = ggplot(df_r) + \
+# aes_string(x = 'grade', y = 'mean') + \
+# geom_bar(stat='identity',fill="cornsilk" , size=.2)
+# Currently there is no support for geom_errorbar
+pd.DataFrame.hist_helper_rpy2 = hist_helper_rpy2
+  
+# print import pandas.rpy.common as comggplot(df, aes(x = 'grade', y = 'mean')) + \
+# geom_bar(stat='identity',fill="cornsilk" , size=.2)
 
 #########################################################
 # Simple outlier detection based on distance 
