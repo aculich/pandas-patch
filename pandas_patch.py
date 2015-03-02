@@ -98,10 +98,12 @@ def manymissing(self,a,row = False):
     
 pd.DataFrame.manymissing = manymissing
 
-def constantcol(self):
+def constantcol(self,**kwargs):
     """ identify constant columns """
     # sample to reduce computation time 
-    col_to_keep = self.sample_df().apply(lambda x: len(x.unique()) == 1,axis = 0 )
+    col_to_keep = self.sample_df(**kwargs).apply(lambda x: len(x.unique()) == 1,axis = 0 )
+    if len(cserie(col_to_keep)) == 0:
+        return []
     self = self.loc[:,col_to_keep]
     return cserie(self.apply(lambda x: len(x.unique()) == 1,axis = 0 ))
     
@@ -126,10 +128,10 @@ def dfnum(self):
 
 pd.DataFrame.dfnum = dfnum 
 
-def detectkey(self, index_format = True, pct = 0.15):
+def detectkey(self, index_format = True, pct = 0.15,**kwargs):
     """ identify id or key columns as an index if index_format = True or 
     as a Serie if index_format = False """
-    col_to_keep = self.sample_df(pct = 0.15).apply(lambda x: len(x.unique()) == len(x) ,axis = 0)
+    col_to_keep = self.sample_df(pct = 0.15,**kwargs).apply(lambda x: len(x.unique()) == len(x) ,axis = 0)
     if index_format:
         return cserie(self.loc[:,col_to_keep].apply(lambda x: len(x.unique()) == len(x) ,axis = 0))
     else :
@@ -160,13 +162,19 @@ def df_len_string(self):
 
 pd.DataFrame.df_len_string = df_len_string
 
-def findupcol(self):
-    """ find duplicated columns and return the result as a list of list
-    Function to correct , working but bad coding """
-    dup_index_s = (self.sample_df(threshold = 100).T.duplicated()) | (self.sample_df(threshold = 100).T.duplicated(take_last = True))
+def findupcol(self,threshold = 100,**kwargs):
+    """ find duplicated columns and return the result as a list of list """
+
+    df_s = self.sample_df(threshold = 100,**kwargs).T
+    dup_index_s = (df_s.duplicated()) | (df_s.duplicated(take_last = True))
+    
+    if len(cserie(dup_index_s)) == 0:
+        return []
+
     df_t = (self.loc[:,dup_index_s]).T
     dup_index = df_t.duplicated()
     dup_index_complet = cserie((dup_index) | (df_t.duplicated(take_last = True)))
+
     l = []
     for col in cserie(dup_index):
         index_temp = self[dup_index_complet].apply(lambda x: (x == self[col])).sum() == self.nrow()
@@ -362,9 +370,7 @@ def groupsummarys(self,groupvar,measurevar):
     """ provide a summary of measurevar groupby groupvar. measurevar and 
     groupvar are list of column names. this function is optimized for speed """
     functions = ['count','min','mean','median','std','max']
-    col = measurevar + groupvar 
-    df = self[col]
-    return df.groupby(groupvar).agg(functions)
+    return self.groupby(groupvar)[measurevar].agg(functions)
 
 pd.DataFrame.groupsummarys = groupsummarys
 
@@ -373,9 +379,7 @@ pd.DataFrame.groupsummarys = groupsummarys
 def groupsummaryd(self,groupvar,measurevar):
     """ provide a summary of measurevar groupby groupvar with describe helper.
     measurevar and groupvar are list of column names """
-    col = measurevar + groupvar 
-    df = self[col]
-    return df.groupby(groupvar).describe()
+    return self.groupby(groupvar)[measurevar].describe()
 
 pd.DataFrame.groupsummaryd = groupsummaryd
 
@@ -387,18 +391,16 @@ def groupsummarysc(self,groupvar,measurevar,confint=0.95,cut = False,
     if you want bucket of equal length instead of quantile put is_bucket = True """
     def student_ci(x):
         return se(x) * scipy.stats.t.interval(confint, len(x) - 1,**kwargs)[1]
-
+    self = self.copy()
     functions = ['count','min',('ci_low',lambda x: np.mean(x) - student_ci(x)),
      'mean',('ci_up',lambda x: np.mean(x) + student_ci(x)),'median',('se',se),'std','max']
-    col = measurevar + groupvar 
-    df = self[col]
     if cut == True:
         for var in groupvar:
-            if if_bucket:
-                df[var] = pd.cut(df[var],bins = quantile)
+            if if_bucket == False:
+                self[var] = pd.cut(self[var],bins = quantile)
             else: 
-                df[var] = pd.qcut(df[var],q = quantile)
-    return df.groupby(groupvar).agg(functions)
+                self[var] = pd.qcut(self[var],q = quantile)
+    return self.groupby(groupvar)[measurevar].agg(functions)
 
 pd.DataFrame.groupsummarysc = groupsummarysc
 
@@ -415,17 +417,15 @@ def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
     def ci_up(x):
         return bootstrap.ci(data=x, statfunction=scipy.mean, alpha = confint,
                     n_samples = nsamples,**kwargs)[1]
-
+    self = self.copy()
     functions = ['count','min',ci_low,'mean',ci_up,'median','std','max']
-    col = measurevar + groupvar 
-    df = self[col]
     if cut == True:
         for var in groupvar:
-            if is_bucket:
-                [var] = pd.cut(df[var],bins = quantile)
+            if is_bucket == True:
+                self[var] = pd.cut(self[var],bins = quantile)
             else: 
-                df[var] = pd.qcut(df[var],q = quantile)
-    return df.groupby(groupvar).agg(functions)
+                self[var] = pd.qcut(self[var],q = quantile)
+    return self.groupby(groupvar)[measurevar].agg(functions)
 
 pd.DataFrame.groupsummarybc = groupsummarybc
 
@@ -438,21 +438,19 @@ def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
     if you want bucket of equal length instead of quantile put is_bucket = True """
     def student_ci(x):
         return se(x) * scipy.stats.t.interval(confint, len(x) - 1,**kwargs)[1]
-
+    self = self.copy()
     functions = ['count','min', quantile_25,'mean',se,student_ci,
     'median','std','mad',skewness ,kurtosis,quantile_75,'max']
-    col = measurevar + groupvar 
-    df = self[col]
     # Correct the problem of unicity 
     if cut == True:
         for var in groupvar:
-            if is_bucket:
-                df.loc[:,var] = pd.cut(df.loc[:,var],bins = quantile)
+            if is_bucket == True:
+                self.loc[:,var] = pd.cut(self.loc[:,var],bins = quantile)
             else: 
-                df.loc[:,var] = pd.qcut(df.loc[:,var],q = quantile)
+                self.loc[:,var] = pd.qcut(self.loc[:,var],q = quantile)
             
     # grouping, apply function and return results 
-    return df.groupby(groupvar).agg(functions)
+    return self.groupby(groupvar)[measurevar].agg(functions)
     
 pd.DataFrame.groupsummaryscc = groupsummaryscc
 
@@ -460,19 +458,17 @@ pd.DataFrame.groupsummaryscc = groupsummaryscc
 # This is the global function that the user will be using 
 def groupsummary(self,groupvar,measurevar,confint=0.95,fast_summary =False,
                 detailled_summary = False,boostrap = False,
-                   cut = False, quantile = 5,is_bucket = False, **kwargs):
-    col = measurevar + groupvar 
-    df = self[col]
+                   cut = False, quantile = 5,is_bucket = False,group_keys = False,**kwargs):
+    self = self.copy()
     if fast_summary:
-        return df.groupby(groupvar).agg(['count','min','mean','median','std','max'])
-    elif functions_detailled:
+        return self.groupby(groupvar)[measurevar].agg(['count','min','mean','median','std','max'])
+    if functions_detailled:
         return self.groupsummaryscc(groupvar,measurevar,confint,
-                   cut,is_bucket, **kwargs)
-    elif boostrap:
+                   cut,is_bucket,group_keys,**kwargs)
+    if boostrap:
         return self.groupsummarybc(groupvar,measurevar,confint,nsamples,
                    cut, quantile,is_bucket, **kwargs)
-    else:
-        return self.groupsummarysc(groupvar,measurevar,confint,cut, 
+    return self.groupsummarysc(groupvar,measurevar,confint,cut, 
     quantile,is_bucket ,**kwargs)
 
 
@@ -536,7 +532,8 @@ pd.DataFrame.outliers_detection =  outlier_detection
 # Global summary and basic cleaning function  
 #########################################################
 
-def psummary(self,manymissing_p = 0.70,nzv_freq_cut = 95/5, nzv_unique_cut = 10):
+def psummary(self,manymissing_p = 0.70,nzv_freq_cut = 95/5, nzv_unique_cut = 10,
+    threshold = 100):
     """ This function will print you a summary of the dataset, based on function 
     designed is this package 
     - Argument : pandas.Dataframe
@@ -545,7 +542,7 @@ def psummary(self,manymissing_p = 0.70,nzv_freq_cut = 95/5, nzv_unique_cut = 10)
     print 'the columns with more than {0}% manymissing values:\n{1} \n'.format(100 * manymissing_p,
 list(self.manymissing(manymissing_p)))
     print 'the detected keys of the dataset are:\n{0} \n'.format(list(self.detectkey()))
-    print 'the duplicated columns of the dataset are:\n{0}\n'.format(self.findupcol())
+    print 'the duplicated columns of the dataset are:\n{0}\n'.format(self.findupcol(threshold = 100))
     print 'the constant columns of the dataset are:\n{0}\n'.format(list(self.constantcol()))
     print 'the columns with nearzerovariance are:\n{0}'.format(
     list(cserie(self.nearzerovar(nzv_freq_cut,nzv_unique_cut,save_metrics =True).nzv)))
