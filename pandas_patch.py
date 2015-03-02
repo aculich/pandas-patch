@@ -46,8 +46,10 @@ cserie = lambda serie: serie[serie].index
 # Data cleaning and exploration helpers 
 #########################################################
 
-def sample_df(self,pct = 0.05,nr = 10):
+def sample_df(self,pct = 0.05,nr = 10,threshold = None):
     a = max(int(pct*float(len(self.index))),nr)
+    if threshold:
+        a = min(a,threshold)
     return self.loc[permutation(self.index)[:a]]
 
 pd.DataFrame.sample_df = sample_df
@@ -161,14 +163,19 @@ pd.DataFrame.df_len_string = df_len_string
 def findupcol(self):
     """ find duplicated columns and return the result as a list of list
     Function to correct , working but bad coding """
-    dup_index = self.T.duplicated()
-    dup_index_complet = (dup_index) | (self.T.duplicated(take_last = True))
+    dup_index_s = (self.sample_df(threshold = 100).T.duplicated()) | (self.sample_df(threshold = 100).T.duplicated(take_last = True))
+    df_t = (self.loc[:,dup_index_s]).T
+    dup_index = df_t.duplicated()
+    dup_index_complet = cserie((dup_index) | (df_t.duplicated(take_last = True)))
     l = []
-    for col in self.columns[dup_index]:
-        index_temp = self.loc[:,dup_index_complet].apply(lambda x: (x == self[col])).sum() == self.nrow()
-        temp = list(self.loc[:,dup_index_complet].columns[index_temp])
+    for col in cserie(dup_index):
+        index_temp = self[dup_index_complet].apply(lambda x: (x == self[col])).sum() == self.nrow()
+        temp = list(self[dup_index_complet].columns[index_temp])
         l.append(temp)
     return l
+
+
+
 
 pd.DataFrame.findupcol = findupcol
 
