@@ -387,7 +387,7 @@ def groupsummarysc(self,groupvar,measurevar,confint=0.95,cut = False,
     df = self[col]
     if cut == True:
         for var in groupvar:
-            if if_bucket == False:
+            if if_bucket:
                 df[var] = pd.cut(df[var],bins = quantile)
             else: 
                 df[var] = pd.qcut(df[var],q = quantile)
@@ -413,9 +413,9 @@ def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
     col = measurevar + groupvar 
     df = self[col]
     if cut == True:
-        for var in groupvar:()
-            if is_bucket == True:
-                df[var] = pd.cut(df[var],bins = quantile)
+        for var in groupvar:
+            if is_bucket:
+                [var] = pd.cut(df[var],bins = quantile)
             else: 
                 df[var] = pd.qcut(df[var],q = quantile)
     return df.groupby(groupvar).agg(functions)
@@ -439,7 +439,7 @@ def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
     # Correct the problem of unicity 
     if cut == True:
         for var in groupvar:
-            if is_bucket == True:
+            if is_bucket:
                 df.loc[:,var] = pd.cut(df.loc[:,var],bins = quantile)
             else: 
                 df.loc[:,var] = pd.qcut(df.loc[:,var],q = quantile)
@@ -469,7 +469,7 @@ def groupsummary(self,groupvar,measurevar,confint=0.95,fast_summary =False,
     quantile,is_bucket ,**kwargs)
 
 
-pd.Dataframe.groupsummary = groupsummary
+pd.DataFrame.groupsummary = groupsummary
 
 def group_average(self,groupvar,measurevar,avg_weight):
     """ return an weighted ( the weight are given by avg_weight) mean 
