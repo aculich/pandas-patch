@@ -18,12 +18,20 @@ import unittest2 as unittest
 from pandas_patch import *
 import numpy as np 
 
-test_df = pd.read_csv('lc_test.csv')
-test_df['na_col'] = np.nan
-test_df['constant_col'] = 'constant'
-test_df['duplicated_column'] = test_df.id
-test_df['many_missing_70'] = [1]*300 + [np.nan] * 700
-test_df['num_var'] = range(test_df.shape[0])
+def create_test_df(test_df):
+    test_df = pd.read_csv('lc_test.csv')
+    test_df['na_col'] = np.nan
+    test_df['constant_col'] = 'constant'
+    test_df['duplicated_column'] = test_df.id
+    test_df['many_missing_70'] = [1]*300 + [np.nan] * 700
+    test_df['num_var'] = range(test_df.shape[0])
+    test_df['bad'] = 1
+    index_good = test_df['loan_status'].isin(['Fully Paid', 'Current','In Grace Period'])
+    test_df.loc[index_good,'bad'] = 0
+    return test_df 
+
+test_df = create_test_df(pd.read_csv('lc_test.csv'))
+
 flatten_list = lambda x: [y for l in x for y in flatten_list(l)] if isinstance(x,list) else [x]
 
 #flatten_list = lambda x: [y for l in x for y in flatten_list(l)] if isinstance(x,list) else [x]
@@ -85,7 +93,7 @@ class TestPandasPatch(unittest.TestCase):
         self.assertNotIn('member_id',flatten_list(findupcol))
         
     def test_clean_df(self):
-        clean_df = test_df.clean_df().columns
+        clean_df = test_df.clean_df(drop_col = 'duplicated_column').columns
         self.assertTrue(all([e not in clean_df for e in ['constant_col',
                             'na_col','duplicated_column']]))
         self.assertIn('id',clean_df)

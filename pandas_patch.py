@@ -31,7 +31,6 @@ import re
 from dateutil.parser import parse
 from itertools import izip #izip faster than zip 
 from numpy.random import permutation
-from ggplot import *
 
 #########################################################
 # Private Helpers 
@@ -47,6 +46,7 @@ cserie = lambda serie: serie[serie].index
 #########################################################
 
 def sample_df(self,pct = 0.05,nr = 10,threshold = None):
+    """ sample a number of rows of a dataframe = min(max(0.05*nrow(self,nr),threshold)"""
     a = max(int(pct*float(len(self.index))),nr)
     if threshold:
         a = min(a,threshold)
@@ -86,7 +86,7 @@ def narowcount(self):
 pd.DataFrame.narowcount = narowcount
 
 
-def manymissing(self,a,row = False):
+def manymissing(self,a=0.9,row = False):
     """ identify columns of a dataframe with many missing values ( >= a), if 
     row = False row either
     - the output is a pandas index """
@@ -533,29 +533,42 @@ pd.DataFrame.outliers_detection =  outlier_detection
 #########################################################
 
 def psummary(self,manymissing_p = 0.70,nzv_freq_cut = 95/5, nzv_unique_cut = 10,
-    threshold = 100):
+threshold = 100):
     """ This function will print you a summary of the dataset, based on function 
     designed is this package 
     - Argument : pandas.Dataframe
     - Output : python print 
     """
     print 'the columns with more than {0}% manymissing values:\n{1} \n'.format(100 * manymissing_p,
-list(self.manymissing(manymissing_p)))
+    list(self.manymissing(manymissing_p)))
     print 'the detected keys of the dataset are:\n{0} \n'.format(list(self.detectkey()))
     print 'the duplicated columns of the dataset are:\n{0}\n'.format(self.findupcol(threshold = 100))
     print 'the constant columns of the dataset are:\n{0}\n'.format(list(self.constantcol()))
     print 'the columns with nearzerovariance are:\n{0}'.format(
     list(cserie(self.nearzerovar(nzv_freq_cut,nzv_unique_cut,save_metrics =True).nzv)))
+    print 'the columns highly correlated are:\n{0}'.format(self.findcorr(dataframe = False))
+
 pd.DataFrame.psummary = psummary
 
-def clean_df(self,manymissing_p = 0.9,filter_dupcol = True,filter_constantcol = True):
+def clean_df(self,manymissing_p = 0.9,drop_col = None,filter_constantcol = True):
+    """ 
+    Basic cleaning of the data by deleting manymissing columns, 
+    constantcol and drop_col specified by the user
+
+    """
+    col_to_remove = []
     if manymissing_p:
-        self = self.drop(self.manymissing(manymissing_p) ,axis = 1)
-    if filterdupcol:
-        self = self.filterdupcol()
+        col_to_remove += list(self.manymissing(manymissing_p))
     if filter_constantcol:
-        self = self.drop(self.constantcol(), axis = 1)
-    return self 
+        col_to_remove += list(self.constantcol())
+    if isinstance(drop_col,list):
+        col_to_remove += drop_col
+    elif isinstance(drop_col,str):
+        col_to_remove += [drop_col]
+    else :
+        pass
+    return self.drop(pd.unique(col_to_remove),axis = 1)
+
 
 pd.DataFrame.clean_df = clean_df   
         
@@ -584,7 +597,7 @@ if __name__ == "__main__":
     # Create a test dataframe 
     #########################################################
 
-    test = DataFrame(read_csv('lc_test.csv'))
+    test = pd.DataFrame(pd.read_csv('lc_test.csv'))
     test['na_col'] = np.nan
     test['constant_col'] = 'constant'
     test['duplicated_column'] = test.id
