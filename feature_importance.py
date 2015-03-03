@@ -114,7 +114,7 @@ class FeatureImportance:
 		else:
 			self._rpe_param = [cutoff, method]
 			rpe_list = findcorr(self.dataframe, cutoff=cutoff, method=method)
-			self._rpe_imp = self.predictors.apply(lambda x: !(x in rpe_list))
+			self._rpe_imp = self.predictors.apply(lambda x: (x not in rpe_list))
 			return pd.DataFrame({'Predictors': self.predictors, 'RPE': self._rpe_imp})
 
 	def summary(self):
