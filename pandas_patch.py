@@ -23,7 +23,6 @@ Note : don't use inplace = True inside monkey patching ...
 import pandas as pd 
 import numpy as np 
 from pandas import DataFrame
-from pandas import read_csv
 import scipy
 from scipy.stats import t
 import scikits.bootstrap as bootstrap
@@ -241,17 +240,9 @@ def is_date(self,exclude_numver):
 pd.DataFrame.is_date = is_date            
 
 def structure(self):
-    """ this function will return a more complete type summary of variables type
-    to reprogram it is ugly 
-    """
-    primary_type = self.dtypes
-    is_key = self.detectkey(index_format = False)
-    is_date = self.is_date()
+    """ this function will return a more detailled column type"""
+    return self.apply(lambda x: pd.lib.infer_dtype(x.values))
     
-    df = pd.concat([primary_type,is_key,is_date],axis = 1 )
-    df.columns = ['primary_type','is_key','is_date']
-    return df 
-
 pd.DataFrame.structure = structure
 
 
@@ -396,7 +387,7 @@ def groupsummarysc(self,groupvar,measurevar,confint=0.95,cut = False,
      'mean',('ci_up',lambda x: np.mean(x) + student_ci(x)),'median',('se',se),'std','max']
     if cut == True:
         for var in groupvar:
-            if if_bucket == False:
+            if is_bucket == False:
                 self[var] = pd.cut(self[var],bins = quantile)
             else: 
                 self[var] = pd.qcut(self[var],q = quantile)
@@ -539,6 +530,8 @@ threshold = 100):
     - Argument : pandas.Dataframe
     - Output : python print 
     """
+    print 'there are {0} row duplicates\n'.format(self.duplicated().sum())
+    print 'these colums have mixed type :\n{0} \n'.format(list(cserie(self.structure().str.contains('mixed'))))
     print 'the columns with more than {0}% manymissing values:\n{1} \n'.format(100 * manymissing_p,
     list(self.manymissing(manymissing_p)))
     print 'the detected keys of the dataset are:\n{0} \n'.format(list(self.detectkey()))
@@ -546,7 +539,7 @@ threshold = 100):
     print 'the constant columns of the dataset are:\n{0}\n'.format(list(self.constantcol()))
     print 'the columns with nearzerovariance are:\n{0}'.format(
     list(cserie(self.nearzerovar(nzv_freq_cut,nzv_unique_cut,save_metrics =True).nzv)))
-    print 'the columns highly correlated are:\n{0}'.format(self.findcorr(dataframe = False))
+    # print 'the columns highly correlated are:\n{0}'.format(self.findcorr(data_frame = False))
 
 pd.DataFrame.psummary = psummary
 
