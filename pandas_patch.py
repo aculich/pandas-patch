@@ -161,6 +161,8 @@ def df_len_string(self):
 
 pd.DataFrame.df_len_string = df_len_string
 
+
+
 def findupcol(self,threshold = 100,**kwargs):
     """ find duplicated columns and return the result as a list of list """
 
@@ -385,9 +387,9 @@ def groupsummarysc(self,groupvar,measurevar,confint=0.95,cut = False,
     self = self.copy()
     functions = ['count','min',('ci_low',lambda x: np.mean(x) - student_ci(x)),
      'mean',('ci_up',lambda x: np.mean(x) + student_ci(x)),'median',('se',se),'std','max']
-    if cut == True:
+    if cut:
         for var in groupvar:
-            if is_bucket == False:
+            if is_bucket:
                 self[var] = pd.cut(self[var],bins = quantile)
             else: 
                 self[var] = pd.qcut(self[var],q = quantile)
@@ -410,9 +412,9 @@ def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
                     n_samples = nsamples,**kwargs)[1]
     self = self.copy()
     functions = ['count','min',ci_low,'mean',ci_up,'median','std','max']
-    if cut == True:
+    if cut:
         for var in groupvar:
-            if is_bucket == True:
+            if is_bucket:
                 self[var] = pd.cut(self[var],bins = quantile)
             else: 
                 self[var] = pd.qcut(self[var],q = quantile)
@@ -433,9 +435,9 @@ def groupsummaryscc(self,groupvar,measurevar,confint=0.95,
     functions = ['count','min', quantile_25,'mean',se,student_ci,
     'median','std','mad',skewness ,kurtosis,quantile_75,'max']
     # Correct the problem of unicity 
-    if cut == True:
+    if cut:
         for var in groupvar:
-            if is_bucket == True:
+            if is_bucket:
                 self.loc[:,var] = pd.cut(self.loc[:,var],bins = quantile)
             else: 
                 self.loc[:,var] = pd.qcut(self.loc[:,var],q = quantile)
@@ -572,6 +574,11 @@ pd.DataFrame.clean_df = clean_df
 #########################################################
 # Unclassified 
 #########################################################
+
+
+def common_cols(df1,df2):
+    """ Return the intersection of commun columns name """
+    return list(set(df1.columns) & set(df2.columns))
 
 
 def info(object, spacing=10, collapse=1):
