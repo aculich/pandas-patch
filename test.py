@@ -16,7 +16,24 @@ This is not a clean coding but it is way faster than using a setup function
 
 import unittest2 as unittest
 from pandas_patch import *
-import numpy as np 
+import numpy as np
+
+
+
+
+def get_test_df_complete():
+    """ get the full test dataset from Lending Club open source database """
+    import requests
+    from zipfile import ZipFile
+    from StringIO import StringIO
+    zip_to_download = "https://resources.lendingclub.com/LoanStats3b.csv.zip"
+    r = requests.get(zip_to_download)
+    zipfile = ZipFile(StringIO(r.content))
+    file_csv = zipfile.namelist()[0]
+    df = pd.read_csv(zipfile.open(file_csv),skiprows =[0,188126,188127,188128,188129],na_values = ['n/a','N/A',''],
+        low_memory=False)
+    zipfile.close()
+    return df 
 
 def create_test_df(test_df):
     test_df = pd.read_csv('lc_test.csv')
