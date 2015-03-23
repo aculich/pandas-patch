@@ -13,14 +13,16 @@ It is providing multiple simple methods for the class dataframe
 
 run "python -m unittest -v test" in the module directory to run the tests 
 
-Note : don't use inplace = True inside monkey patching ...
+Note : don't use inplace = True on self when you are doing monkey patching,
+it is dangerous.
  
 """
 #########################################################
 # Import modules 
 #########################################################
 
-import pandas as pd 
+import pandas as pd
+from utils import deprecated
 import numpy as np 
 from pandas import DataFrame
 import scipy
@@ -38,7 +40,7 @@ from numpy.random import permutation
 
 # Find a better way to do it ( core pandas implementation)
 # cserie return the column name with bool = True for a Serie of boolean 
-cserie = lambda serie: serie[serie].index
+cserie = lambda serie: list(serie[serie].index)
     
 #########################################################
 # Data cleaning and exploration helpers 
@@ -65,8 +67,29 @@ def ncol(self):
 pd.DataFrame.nrow = nrow
 pd.DataFrame.ncol = ncol
 
+def nacount(self,axis = 1):
+    """ count the number of missing values per columns or rows of the dataframe
+
+    - Argument : axis = 1 if you want count the na values per rows, default 0 per columns.
+
+    """
+    if axis == 1 :
+        Serie =  self.isnull().sum()
+        df =  DataFrame(Serie,columns = ['Nanumber'])
+        df['Napercentage'] = df['Nanumber']/(self.nrow())
+    if axis == 0 :
+        Serie = self.isnull().sum(axis = 1)
+        df =  DataFrame(Serie,columns = ['Nanumber'])
+        df['Napercentage'] = df['Nanumber']/(self.ncol())
+    return df 
+
+pd.DataFrame.nacount = nacount
+
+
+
 def nacolcount(self):
     """ count the number of missing values per columns """
+    print "this function is deprecated please use nacount"
     Serie =  self.isnull().sum()
     df =  DataFrame(Serie,columns = ['Nanumber'])
     df['Napercentage'] = df['Nanumber']/(self.nrow())
@@ -74,9 +97,9 @@ def nacolcount(self):
 
 pd.DataFrame.nacolcount = nacolcount
 
-    
 def narowcount(self):
     """ count the number of missing values per rows """
+    print "this function is deprecated please use nacount"
     Serie = self.isnull().sum(axis = 1)
     df =  DataFrame(Serie,columns = ['Nanumber'])
     df['Napercentage'] = df['Nanumber']/(self.ncol())
@@ -85,14 +108,14 @@ def narowcount(self):
 pd.DataFrame.narowcount = narowcount
 
 
-def manymissing(self,a=0.9,row = False):
+def manymissing(self,a=0.9,axis = 1):
     """ identify columns of a dataframe with many missing values ( >= a), if 
-    row = False row either
+    axis = 1 row either
     - the output is a pandas index """
-    if row:
-        self = self.narowcount()
-    else :
-        self = self.nacolcount()
+    if axis == 0:
+        self = self.nacount(axis = 0)
+    if axis == 1:
+        self = self.nacount(axis = 1 )
     return self[self['Napercentage'] >= a].index
     
 pd.DataFrame.manymissing = manymissing
@@ -103,8 +126,7 @@ def constantcol(self,**kwargs):
     col_to_keep = self.sample_df(**kwargs).apply(lambda x: len(x.unique()) == 1,axis = 0 )
     if len(cserie(col_to_keep)) == 0:
         return []
-    self = self.loc[:,col_to_keep]
-    return cserie(self.apply(lambda x: len(x.unique()) == 1,axis = 0 ))
+    return cserie(self.loc[:,col_to_keep].apply(lambda x: len(x.unique()) == 1,axis = 0 ))
     
 pd.DataFrame.constantcol = constantcol
 
@@ -223,23 +245,23 @@ def dfquantiles(self,nb_quantiles = 10,only_numeric = True):
     
 pd.DataFrame.dfquantiles = dfquantiles
 
-def is_date(self,exclude_numver):
-    """ to reprogram it is ugly """
-    d = {}
-    for col in self.columns:
-        try :
-             d[col] = False
-             # i loop trough non missing value 
-             # this try-except loop is bad programming 
-             l = [parse(e) for e in self.loc[pd.notnull(self[col]),col]]
-             len_not_na = self[pd.notnull(self[col])].nrow()
-             if len(l) == len_not_na and len_not_na > 0 :          
-                 d[col] = True
-        except : 
-            continue 
-    return pd.Series(d)
+# def is_date(self,exclude_numver):
+#     """ to reprogram it is ugly """
+#     d = {}
+#     for col in self.columns:
+#         try :
+#              d[col] = False
+#              # i loop trough non missing value 
+#              # this try-except loop is bad programming 
+#              l = [parse(e) for e in self.loc[pd.notnull(self[col]),col]]
+#              len_not_na = self[pd.notnull(self[col])].nrow()
+#              if len(l) == len_not_na and len_not_na > 0 :          
+#                  d[col] = True
+#         except : 
+#             continue 
+#     return pd.Series(d)
             
-pd.DataFrame.is_date = is_date            
+# pd.DataFrame.is_date = is_date            
 
 def structure(self):
     """ this function will return a more detailled column type"""
@@ -362,7 +384,7 @@ def kurtosis(x):
 def groupsummarys(self,groupvar,measurevar):
     """ provide a summary of measurevar groupby groupvar. measurevar and 
     groupvar are list of column names. this function is optimized for speed """
-    functions = ['count','min','mean','median','std','max']
+    functions = ['count','min','mean','median','std','sem','max']
     return self.groupby(groupvar)[measurevar].agg(functions)
 
 pd.DataFrame.groupsummarys = groupsummarys
@@ -597,7 +619,7 @@ if __name__ == "__main__":
     # Create a test dataframe 
     #########################################################
 
-    test = pd.DataFrame(pd.read_csv('lc_test.csv'))
+    test = pd.read_csv('lc_test.csv')
     test['na_col'] = np.nan
     test['constant_col'] = 'constant'
     test['duplicated_column'] = test.id
@@ -608,8 +630,8 @@ if __name__ == "__main__":
     # Testing the functions 
     #########################################################
     
-    test.nacolcount()
-    test.narowcount()
+    test.nacount()
+    test.nacount(axis = 0)
     test.manymissing(0.5)
     test.nrow()
     test.ncol()
