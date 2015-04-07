@@ -25,7 +25,7 @@ import numpy as np
 from pandas import DataFrame
 from numpy.random import permutation
 from numpy.random import choice 
-from utils import bootstrap_ci
+from .utils import bootstrap_ci
 
 # bug of 0.16 verison
 
