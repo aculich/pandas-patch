@@ -611,7 +611,7 @@ def outlier_detection(self,subset = None,remove_constant_col = True,
         self = self.drop(self.constantcol(), axis = 1) # remove constant variable 
     scores = [z_score,iqr_score,mad_score]
     keys = ['z_score','iqr_score','mad_score']
-    return {key : self.apply(func) for key,func in zip(keys,scores)} 
+    return dict((key,self.apply(func)) for key,func in zip(keys,scores)) 
     
 pd.DataFrame.outliers_detection =  outlier_detection
 
