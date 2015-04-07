@@ -1,55 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Feb 11 10:33:16 2015
 
 @author: efourrier
 
-Purpose : Automated test suites with unitest
+Purpose : Automated test suites with unittest
 run "python -m unittest -v test" in the module directory to run the tests 
 
-This is not a clean coding but it is way faster than using a setup function
 """
 
 #########################################################
 # Import Packages and helpers 
 #########################################################
 
-import unittest2 as unittest
-from pandas_patch import *
-import numpy as np
-
-
-
-
-def get_test_df_complete():
-    """ get the full test dataset from Lending Club open source database """
-    import requests
-    from zipfile import ZipFile
-    from StringIO import StringIO
-    zip_to_download = "https://resources.lendingclub.com/LoanStats3b.csv.zip"
-    r = requests.get(zip_to_download)
-    zipfile = ZipFile(StringIO(r.content))
-    file_csv = zipfile.namelist()[0]
-    df = pd.read_csv(zipfile.open(file_csv),skiprows =[0,188126,188127,188128,188129],na_values = ['n/a','N/A',''],
-        low_memory=False)
-    zipfile.close()
-    return df 
-
-def create_test_df(test_df):
-    test_df = pd.read_csv('lc_test.csv')
-    test_df['na_col'] = np.nan
-    test_df['constant_col'] = 'constant'
-    test_df['duplicated_column'] = test_df.id
-    test_df['many_missing_70'] = [1]*300 + [np.nan] * 700
-    test_df['num_var'] = range(test_df.shape[0])
-    test_df['bad'] = 1
-    index_good = test_df['loan_status'].isin(['Fully Paid', 'Current','In Grace Period'])
-    test_df.loc[index_good,'bad'] = 0
-    return test_df 
-
-test_df = create_test_df(pd.read_csv('lc_test.csv'))
+import unittest
+import pandas_patch.main
+from pandas_patch.main import pd
+# internal helpers 
+from pandas_patch.utils import clock
+from pandas_patch.utils import create_test_df
 
 flatten_list = lambda x: [y for l in x for y in flatten_list(l)] if isinstance(x,list) else [x]
+
 
 #flatten_list = lambda x: [y for l in x for y in flatten_list(l)] if isinstance(x,list) else [x]
 #########################################################
@@ -58,63 +29,130 @@ flatten_list = lambda x: [y for l in x for y in flatten_list(l)] if isinstance(x
 
 class TestPandasPatch(unittest.TestCase):
 
-    def test_sample_df(self):
-        self.assertEqual(len(test_df.sample_df(pct = 0.061)),
-                         0.061 * float(test_df.shape[0]))
+    @classmethod
+    def setUpClass(cls):
+        """ creating test data set for the test module """
+        cls._test_df = create_test_df()
 
-    def test_nrow(self):
-        self.assertEqual(test_df.nrow(),test_df.shape[0])
+
     
+    @clock
+    def test_sample_df(self):
+        self.assertEqual(len(self._test_df.sample_df(pct = 0.061)),
+                         0.061 * float(self._test_df.shape[0]))
+    
+    @clock
+    def test_nrow(self):
+        self.assertEqual(self._test_df.nrow(),self._test_df.shape[0])
+    
+    @clock
     def test_col(self):
-        self.assertEqual(test_df.ncol(),test_df.shape[1])
-        
+        self.assertEqual(self._test_df.ncol(),self._test_df.shape[1])
+    
+    @clock    
     def test_nacolcount_capture_na(self):
-        nacolcount = test_df.nacolcount()
+        nacolcount = self._test_df.nacolcount()
         self.assertEqual(nacolcount.loc['na_col','Napercentage'],1.0)
         self.assertEqual(nacolcount.loc['many_missing_70','Napercentage'],0.7)
-        
+    
+    @clock    
     def test_nacolcount_is_type_dataframe(self):
-        self.assertIsInstance(test_df.nacolcount(),pd.core.frame.DataFrame)
+        self.assertIsInstance(self._test_df.nacolcount(),pd.core.frame.DataFrame)
     
+    @clock
     def test_narowcount_capture_na(self):
-        narowcount = test_df.narowcount()
-        self.assertEqual(sum(narowcount['Nanumber'] > 0),test_df.nrow())
+        narowcount = self._test_df.narowcount()
+        self.assertEqual(sum(narowcount['Nanumber'] > 0),self._test_df.nrow())
     
+    @clock
     def test_narowcount_is_type_dataframe(self):
-        narowcount = test_df.narowcount()
+        narowcount = self._test_df.narowcount()
         self.assertIsInstance(narowcount,pd.core.frame.DataFrame)
     
+    @clock
     def test_manymissing_capture(self):
-        manymissing = test_df.manymissing(0.7)
+        manymissing = self._test_df.manymissing(0.7)
         self.assertIn('many_missing_70',manymissing)
         self.assertIn('na_col',manymissing)
     
+    @clock
     def test_constant_col_capture(self):
-        constantcol = test_df.constantcol()
+        constantcol = self._test_df.constantcol()
         self.assertIn('constant_col',constantcol)
+        self.assertIn('constant_col_num',constantcol)
+        self.assertIn('na_col',constantcol)
     
+    @clock
+    def test_count_unique(self):
+        count_unique = self._test_df.count_unique()
+        self.assertEqual(count_unique.id,1000)
+        self.assertEqual(count_unique.constant_col,1)
+        self.assertEqual(count_unique.character_factor,7)
+    
+    @clock
+    def test_dfchar_check_col(self):
+        dfchar = self._test_df.dfchar()
+        self.assertIsInstance(dfchar,list)
+        self.assertNotIn('num_variable', dfchar)
+        self.assertIn('character_factor', dfchar)
+        self.assertIn('character_variable',dfchar)
+        self.assertNotIn('many_missing_70',dfchar)
+    
+    @clock
     def test_dfnum_check_col(self):
-        dfnum = test_df.dfnum()
-        self.assertNotIn('constant_col', dfnum)
-        self.assertIn('num_var', dfnum)
+        dfnum = self._test_df.dfnum()
+        self.assertIsInstance(dfnum,list)
+        self.assertIn('num_variable', dfnum)
+        self.assertNotIn('character_factor', dfnum)
+        self.assertNotIn('character_variable',dfnum)
         self.assertIn('many_missing_70',dfnum)
-        
-    def test_detectkey_check_col(self):
-        detectkey = test_df.detectkey()
-        self.assertIn('id', detectkey)
     
+    @clock
+    def test_factors_check_col(self):
+        factors = self._test_df.factors()
+        self.assertIsInstance(factors,list)
+        self.assertNotIn('num_factor', factors)
+        self.assertNotIn('character_variable',factors)
+        self.assertIn('character_factor', factors)
+    
+    @clock
+    def test_detectkey_check_col(self):
+        detectkey = self._test_df.detectkey()
+        self.assertIn('id', detectkey)
+        self.assertIn('member_id', detectkey)
+
+    @clock
+    def test_detectkey_check_col_dropna(self):
+        detectkeyna = self._test_df.detectkey(dropna = True)
+        self.assertIn('id_na', detectkeyna)
+        self.assertIn('id', detectkeyna)
+        self.assertIn('member_id', detectkeyna)
+    
+    @clock
     def test_findupcol_check(self):
-        findupcol = test_df.findupcol()
-        self.assertIn(['loan_amnt', 'funded_amnt'],findupcol)
+        findupcol = self._test_df.findupcol()
         self.assertIn(['id', 'duplicated_column'],findupcol)
         self.assertNotIn('member_id',flatten_list(findupcol))
-        
+    
+    @clock  
     def test_clean_df(self):
-        clean_df = test_df.clean_df(drop_col = 'duplicated_column').columns
+        clean_df = self._test_df.clean_df(drop_col = 'duplicated_column').columns
         self.assertTrue(all([e not in clean_df for e in ['constant_col',
                             'na_col','duplicated_column']]))
         self.assertIn('id',clean_df)
 
+    @clock 
+    def test_count_unique(self):
+        count_unique = self._test_df.count_unique()
+        self.assertIsInstance(count_unique,pd.Series)
+        self.assertEqual(count_unique.id,len(self._test_df.id))
+        self.assertEqual(count_unique.constant_col,1)
+        self.assertEqual(count_unique.num_factor,len(pd.unique(self._test_df.num_factor)))
+
+    @clock
+    def test_structure(self):
+        structure = self._test_df.structure()
+        self.assertIsInstance(structure,pd.DataFrame)
 
 # Adding new tests sets 
 #def suite():
