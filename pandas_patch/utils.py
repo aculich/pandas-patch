@@ -56,18 +56,18 @@ def clock(func):
 
 def create_test_df():
     """ Creating a test pandas DataFrame for the unittest suite """
-    test_df = pd.DataFrame({'id' : [i for i in xrange(1,1001)],'member_id': [10*i for i in xrange(1,1001)]})
+    test_df = pd.DataFrame({'id' : [i for i in range(1,1001)],'member_id': [10*i for i in range(1,1001)]})
     test_df['na_col'] = np.nan
     test_df['id_na'] = test_df.id
     test_df.loc[1:3,'id_na'] = np.nan
     test_df['constant_col'] = 'constant'
     test_df['constant_col_num'] = 0
-    test_df['character_factor'] = [choice(list('ABCDEFG')) for _ in xrange(1000)]
-    test_df['num_factor'] = [choice([1,2,3,4]) for _ in xrange(1000)]
+    test_df['character_factor'] = [choice(list('ABCDEFG')) for _ in range(1000)]
+    test_df['num_factor'] = [choice([1,2,3,4]) for _ in range(1000)]
     test_df['nearzerovar_variable'] = 'most_common_value'
     test_df.loc[0,'nearzerovar_variable'] = 'one_value'
-    test_df['binary_variable'] = [choice([0,1]) for _ in xrange(1000)]
-    test_df['character_variable'] = [str(i) for i in xrange(1000)]
+    test_df['binary_variable'] = [choice([0,1]) for _ in range(1000)]
+    test_df['character_variable'] = [str(i) for i in range(1000)]
     test_df['duplicated_column'] = test_df.id
     test_df['many_missing_70'] = [1]*300 + [np.nan] * 700
     test_df['num_variable'] = 100
@@ -112,7 +112,7 @@ def psi(bench,target,group,print_df = True):
     - target is a numpy array of the new variable.
     - group is the number of group you want consider.
     """ 
-    labels_q = np.percentile(bench,[(100.0/group)*i for i in xrange(group + 1)],interpolation = "nearest")
+    labels_q = np.percentile(bench,[(100.0/group)*i for i in range(group + 1)],interpolation = "nearest")
 
     # This is the right approach when you have not a lot of unique value 
     ben_pct = (pd.cut(bench,bins = np.unique(labels_q),include_lowest = True).value_counts())/len(bench)
