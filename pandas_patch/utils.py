@@ -12,7 +12,7 @@ import time
 import pandas as pd 
 import numpy as np
 
-removena_n = lambda array: array[~(np.isnan(array))]
+removena_numpy = lambda array: array[~(np.isnan(array))]
 
 def common_cols(df1,df2):
     """ Return the intersection of commun columns name """
@@ -49,7 +49,7 @@ def clock(func):
         t0 = time.time()
         result = func(*args)
         elapsed = (time.time() - t0) * 1000 # in ms 
-        print 'elapsed : [{0:0.3f}ms]'.format(elapsed)
+        print('elapsed : [{0:0.3f}ms]'.format(elapsed))
         return result
     return clocked
 
@@ -80,7 +80,7 @@ def get_test_df_complete():
     the purpose of this fuction is to be used in a demo ipython notebook """
     import requests
     from zipfile import ZipFile
-    from StringIO import StringIO
+    from io import StringIO
     zip_to_download = "https://resources.lendingclub.com/LoanStats3b.csv.zip"
     r = requests.get(zip_to_download)
     zipfile = ZipFile(StringIO(r.content))

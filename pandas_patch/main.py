@@ -244,11 +244,11 @@ def structure(self,threshold_factor = 10):
     is_key = nb_unique_values == self.nrow()
     # is_key_na = ((nb_unique_values + nb_missing) == self.nrow()) & (~na_columns)
     dict_str = {'dtypes_r': dtypes_r,'perc_missing': perc_missing,
-    'nb_misssing': nb_missing,'is_key': is_key,
+    'nb_missing': nb_missing,'is_key': is_key,
     'nb_unique_values': nb_unique_values,'dtypes': dtypes,
     'constant_columns': constant_columns, 'na_columns': na_columns}
     df =  pd.concat(dict_str,axis =1)
-    return df.loc[:,['dtypes','dtypes_r','nb_misssing','perc_missing',
+    return df.loc[:,['dtypes','dtypes_r','nb_missing','perc_missing',
     'nb_unique_values','constant_columns','na_columns','is_key']]
 
 pd.DataFrame.structure = structure
@@ -373,7 +373,7 @@ def nearzerovar(self, freq_cut = 95/5, unique_cut = 10, save_metrics = False):
 pd.DataFrame.nearzerovar = nearzerovar
 
 
-def findcorr(self, cutoff=.90, method='pearson', data_frame=False):
+def findcorr(self, cutoff=.90, method='pearson', data_frame=False, printcor = False):
     """
         implementation of the Recursive Pairwise Elimination.        
         The function finds the highest correlated pair and removes the most 
@@ -391,7 +391,8 @@ def findcorr(self, cutoff=.90, method='pearson', data_frame=False):
         cor[col][col] = 0
     
     max_cor = cor.max()
-    print (max_cor.max())
+    if printcor:
+        print(max_cor.max())
     while max_cor.max() > cutoff:            
         A = max_cor.idxmax()
         B = cor[A].idxmax()
@@ -406,7 +407,8 @@ def findcorr(self, cutoff=.90, method='pearson', data_frame=False):
             res += [B]
         
         max_cor = cor.max()
-        print (max_cor.max())
+        if printcor:
+            print(max_cor.max())
         
     if data_frame:
         return self.drop(res, 1)
@@ -641,23 +643,23 @@ threshold = 100,string_threshold = 40, dynamic = False):
     """
     nacolcount_p = self.nacount(axis = 0).Napercentage
     if dynamic:
-        print 'there are {0} duplicated rows\n'.format(self.duplicated().sum())
-        print 'the columns with more than {0:.2%} manymissing values:\n{1} \n'.format(manymissing_ph,
-        cserie((nacolcount_p > manymissing_ph)))
+        print('there are {0} duplicated rows\n'.format(self.duplicated().sum()))
+        print('the columns with more than {0:.2%} manymissing values:\n{1} \n'.format(manymissing_ph,
+        cserie((nacolcount_p > manymissing_ph))))
 
-        print 'the columns with less than {0:.2%} manymissing values are :\n{1} \n you should fill them with median or most common value \n'.format(
-        manymissing_pl,cserie((nacolcount_p > 0 ) & (nacolcount_p <= manymissing_pl)))
+        print('the columns with less than {0:.2%} manymissing values are :\n{1} \n you should fill them with median or most common value \n'.format(
+        manymissing_pl,cserie((nacolcount_p > 0 ) & (nacolcount_p <= manymissing_pl))))
 
-        print 'the detected keys of the dataset are:\n{0} \n'.format(self.detectkey())
-        print 'the duplicated columns of the dataset are:\n{0}\n'.format(self.findupcol(threshold = 100))
-        print 'the constant columns of the dataset are:\n{0}\n'.format(self.constantcol())
+        print('the detected keys of the dataset are:\n{0} \n'.format(self.detectkey()))
+        print('the duplicated columns of the dataset are:\n{0}\n'.format(self.findupcol(threshold = 100)))
+        print('the constant columns of the dataset are:\n{0}\n'.format(self.constantcol()))
 
-        print 'the columns with nearzerovariance are:\n{0}\n'.format(
-        list(cserie(self.nearzerovar(nzv_freq_cut,nzv_unique_cut,save_metrics =True).nzv)))
-        print 'the columns highly correlated to others to remove are:\n{0}\n'.format(
-        self.findcorr(data_frame = False))
-        print 'these columns contains big strings :\n{0}\n'.format(
-            cserie(self.df_len_string() > string_threshold))
+        print('the columns with nearzerovariance are:\n{0}\n'.format(
+        list(cserie(self.nearzerovar(nzv_freq_cut,nzv_unique_cut,save_metrics =True).nzv))))
+        print('the columns highly correlated to others to remove are:\n{0}\n'.format(
+        self.findcorr(data_frame = False)))
+        print('these columns contains big strings :\n{0}\n'.format(
+            cserie(self.df_len_string() > string_threshold)))
     else:
         dict_info = {'nb_duplicated_rows': sum(self.duplicated()),
                     'many_missing_percentage': manymissing_ph,
@@ -672,7 +674,7 @@ threshold = 100,string_threshold = 40, dynamic = False):
                     'big_strings_col': cserie(self.df_len_string() > string_threshold)
                     } 
 
-        string_info = """
+        string_info = u"""
 there are {nb_duplicated_rows} duplicated rows\n
 the columns with more than {many_missing_percentage:.2%} manymissing values:\n{manymissing_columns} \n
 the columns with less than {low_missing_percentage:.2%}% manymissing values are :\n{lowmissing_columns} \n
@@ -685,7 +687,7 @@ the columns highly correlated to others to remove are:\n{high_correlated_col}\n
 these columns contains big strings :\n{big_strings_col}\n
         """.format(**dict_info)
 
-        print string_info
+        print(string_info)
 
 
 pd.DataFrame.psummary = psummary
@@ -754,7 +756,7 @@ pd.DataFrame.constantcol2 = constantcol2
 
 def nacolcount(self):
     """ count the number of missing values per columns """
-    print "this function is deprecated please use nacount"
+    print("this function is deprecated please use nacount")
     Serie =  self.isnull().sum()
     df =  DataFrame(Serie,columns = ['Nanumber'])
     df['Napercentage'] = df['Nanumber']/(self.nrow())
@@ -764,7 +766,7 @@ pd.DataFrame.nacolcount = nacolcount
 
 def narowcount(self):
     """ count the number of missing values per rows """
-    print "this function is deprecated please use nacount"
+    print("this function is deprecated please use nacount")
     Serie = self.isnull().sum(axis = 1)
     df =  DataFrame(Serie,columns = ['Nanumber'])
     df['Napercentage'] = df['Nanumber']/(self.ncol())

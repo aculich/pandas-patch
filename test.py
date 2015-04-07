@@ -6,6 +6,7 @@
 Purpose : Automated test suites with unittest
 run "python -m unittest -v test" in the module directory to run the tests 
 
+The clock decorator in utils will measure the run time of the test
 """
 
 #########################################################
@@ -15,12 +16,14 @@ run "python -m unittest -v test" in the module directory to run the tests
 import unittest
 import pandas_patch.main
 from pandas_patch.main import pd
+
+
 # internal helpers 
 from pandas_patch.utils import clock
 from pandas_patch.utils import create_test_df
 
 flatten_list = lambda x: [y for l in x for y in flatten_list(l)] if isinstance(x,list) else [x]
-
+cserie = lambda serie: list(serie[serie].index)
 
 #flatten_list = lambda x: [y for l in x for y in flatten_list(l)] if isinstance(x,list) else [x]
 #########################################################
@@ -33,8 +36,6 @@ class TestPandasPatch(unittest.TestCase):
     def setUpClass(cls):
         """ creating test data set for the test module """
         cls._test_df = create_test_df()
-
-
     
     @clock
     def test_sample_df(self):
@@ -49,7 +50,7 @@ class TestPandasPatch(unittest.TestCase):
     def test_col(self):
         self.assertEqual(self._test_df.ncol(),self._test_df.shape[1])
     
-    @clock    
+    @clock   
     def test_nacolcount_capture_na(self):
         nacolcount = self._test_df.nacolcount()
         self.assertEqual(nacolcount.loc['na_col','Napercentage'],1.0)
@@ -153,6 +154,20 @@ class TestPandasPatch(unittest.TestCase):
     def test_structure(self):
         structure = self._test_df.structure()
         self.assertIsInstance(structure,pd.DataFrame)
+        self.assertEqual(len(self._test_df),structure.loc['na_col','nb_missing'])
+        self.assertEqual(len(self._test_df),structure.loc['id','nb_unique_values'])
+        self.assertTrue(structure.loc['id','is_key'])
+
+    @clock 
+    def test_nearzerovar(self):
+        nearzerovar = self._test_df.nearzerovar(save_metrics = True)
+        self.assertIsInstance(nearzerovar,pd.DataFrame)
+        self.assertIn('nearzerovar_variable',cserie(nearzerovar.nzv))
+        self.assertIn('constant_col',cserie(nearzerovar.nzv))
+        self.assertIn('na_col',cserie(nearzerovar.nzv))
+
+
+
 
 # Adding new tests sets 
 #def suite():
