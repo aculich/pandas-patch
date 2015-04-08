@@ -1,7 +1,7 @@
 #pandas-patch
 
 
-![Travis-CI Build Status](https://travis-ci.org/ericfourrier/pandas-patch.svg?branch=master)
+[![Travis-CI Build Status](https://travis-ci.org/ericfourrier/pandas-patch.svg?branch=master)](https://travis-ci.org/ericfourrier/pandas-patch)
 
 ##CONTENTS OF THIS FILE
 
