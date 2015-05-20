@@ -41,7 +41,8 @@ from .utils import bootstrap_ci
 
 # Find a better way to do it ( core pandas implementation)
 # cserie return the column name with bool = True for a Serie of boolean 
-cserie = lambda serie: list(serie[serie].index)
+def cserie(serie):
+    return serie[serie].index.tolist()
 
     
 #########################################################
@@ -285,7 +286,7 @@ pd.DataFrame.findupcol = findupcol
 
 def finduprow(self,subset = []):
     """ find duplicated rows and return the result a sorted dataframe of all the
-    duplicates
+    duplicates 
     subset is a list of columns to look for duplicates from this specific subset . """
     if subset:
         dup_index = (self.duplicated(subset = subset)) | (self.duplicated(subset = subset,take_last =True)) 
@@ -304,6 +305,16 @@ def filterdupcol(self):
     """ return a dataframe without duplicated columns """
     return self.drop(self.columns[self.T.duplicated()], axis =1)
 pd.DataFrame.filterdupcol = filterdupcol
+
+
+def serie_quantiles(array,nb_quantiles = 10):
+    binq = 1.0/nb_quantiles
+    if type(array) == pd.Series:
+        return array.quantile([binq*i for i in xrange(nb_quantiles +1)])
+    elif type(array) == np.ndarray:
+        return np.percentile(array,[binq*i for i in xrange(nb_quantiles +1)])
+    else :
+        raise("the type of your array is not supported")
 
 def dfquantiles(self,nb_quantiles = 10,only_numeric = True):
     """ this function gives you a all the quantiles 
@@ -481,16 +492,16 @@ pd.DataFrame.groupsummaryd = groupsummaryd
 #     if you want bucket of equal length instead of quantile put is_bucket = True """
 #     def student_ci(x):
 #         return se(x) * scipy.stats.t.interval(confint, len(x) - 1,**kwargs)[1]
-#     self = self.copy()
+#     df = self.copy()
 #     functions = ['count','min',('ci_low',lambda x: np.mean(x) - student_ci(x)),
 #      'mean',('ci_up',lambda x: np.mean(x) + student_ci(x)),'median',('se',se),'std','max']
 #     if cut:
 #         for var in groupvar:
 #             if is_bucket:
-#                 self[var] = pd.cut(self[var],bins = quantile)
+#                 df[var] = pd.cut(df[var],bins = quantile)
 #             else: 
-#                 self[var] = pd.qcut(self[var],q = quantile)
-#     return self.groupby(groupvar)[measurevar].agg(functions)
+#                 df[var] = pd.qcut(df[var],q = quantile)
+#     return df.groupby(groupvar)[measurevar].agg(functions)
 
 # pd.DataFrame.groupsummarysc = groupsummarysc
 
@@ -503,16 +514,26 @@ def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
     if you want bucket of equal length instead of quantile put is_bucket = True """
     ci_low = lambda x : bootstrap_ci(x.values,n = nsamples,ci = confint)[0]
     ci_up = lambda x : bootstrap_ci(x.values,n = nsamples,ci = confint)[1]
-    self = self.copy()
+    df = self.copy()
     functions = ['count','min',('ci_low',lambda x : bootstrap_ci(x.values,n = nsamples,ci = confint)[0]),
     'mean',('ci_up',lambda x : bootstrap_ci(x.values,n = nsamples,ci = confint)[1]),'median','std','max']
     if cut:
-        for var in groupvar:
-            if is_bucket:
-                self[var] = pd.cut(self[var],bins = quantile)
-            else: 
-                self[var] = pd.qcut(self[var],q = quantile)
-    return self.groupby(groupvar)[measurevar].agg(functions)
+        if isinstance(groupvar,list):
+            for var in groupvar:
+                if is_bucket:
+                    df[var] = pd.cut(df[var],bins = quantile)
+                else: 
+                    df[var] = pd.qcut(df[var],q = quantile)
+        elif isinstance(groupvar,str):
+                if is_bucket:
+                    df[groupvar] = pd.cut(df[groupvar],bins = quantile)
+                else: 
+                    df[groupvar] = pd.qcut(df[groupvar],q = quantile)
+        else:
+            raise('groupvar is neither a string or a list please correct the type')
+    return df.groupby(groupvar)[measurevar].agg(functions)
+
+
 
 pd.DataFrame.groupsummarybc = groupsummarybc
 
@@ -581,15 +602,19 @@ pd.DataFrame.group_average = group_average
 
 # We let numpy take care of inf when std = 0 or iqr = 0 
 
-iqr = lambda v: scipy.stats.scoreatpercentile(v,75) - scipy.stats.scoreatpercentile(v,25)
+def iqr(ndarray):
+    return np.percentile(ndarray,75) - np.percentile(ndarray,25)
 
-z_score = lambda v: (v - np.mean(v))/(np.std(v))
+def z_score(ndarray):
+    return (ndarray - np.mean(ndarray))/(np.std(ndarray))
 
 # More robust to outliers 
-iqr_score = lambda v: (v - np.median(v))/(iqr(v))
+def iqr_score(ndarray):
+    return (ndarray - np.median(ndarray))/(iqr(ndarray))
 
-# median(abs(v -median(v))/0.6745)
-mad_score = lambda v: (v - np.median(v))/(np.median(np.absolute(v -np.median(v)/0.6745)))
+# median(abs(ndarray -median(ndarray))/0.6745)
+def mad_score(ndarray):
+    return (ndarray - np.median(ndarray))/(np.median(np.absolute(ndarray -np.median(ndarray)))/0.6745)
 
 def fivenum(v):
     """ Returns Tukey's five number summary 
@@ -600,20 +625,60 @@ def fivenum(v):
     whisker = 1.5*iqr(v)
     return min(v), md-whisker, md, md+whisker, max(v)
 
-def outlier_detection(self,subset = None,remove_constant_col = True,
+def check_negative_value_serie(serie):
+    """ this function will detect if there is negative value and calculate the 
+    ratio negative value/postive value
+    """
+    if serie.dtype == "object":
+        TypeError("The serie should be numeric values")
+    return sum(serie < 0)/sum(serie > 0)
+
+def outlier_detection_serie_d(serie,scores = [z_score,iqr_score,mad_score],
+    cutoff_zscore = 3,cutoff_iqrscore = 2,cutoff_mad = 2):
+    if serie.dtype == 'object':
+        raise("The variable is not a numeric variable")
+    if len(serie.unique()) == 1:
+        raise("The variable has a variance equal to zero")
+    keys = [str(func.__name__) for func in scores]
+    df = pd.DataFrame(dict((key,func(serie)) for key,func in zip(keys,scores)))
+    df['is_outlier'] = 0
+    if 'z_score' in keys :
+        df.loc[np.absolute(df['z_score']) >= cutoff_zscore,'is_outlier'] = 1
+    if 'iqr_score' in keys :
+        df.loc[np.absolute(df['iqr_score']) >= cutoff_iqrscore,'is_outlier'] = 1
+    if 'mad_score' in keys :
+        df.loc[np.absolute(df['mad_score']) >= cutoff_mad,'is_outlier'] = 1
+    return df 
+
+def outlier_detection_d(self,subset = None,remove_constant_col = True,
+                    scores = [z_score,iqr_score,mad_score],
                       cutoff_zscore = 3,cutoff_iqrscore = 2,cutoff_mad = 2):
     """ Return a dictionnary with z_score,iqr_score,mad_score as keys and the 
     associate dataframe of distance as value of the dictionnnary"""
+    df = self.copy()
     if subset:
-        self = self.drop(subset,axis = 1)
-    self = self[self.dfnum()] # take only numeric variable 
+        df = df.drop(subset,axis = 1)
+    df = df[df.dfnum()] # take only numeric variable 
     if remove_constant_col:
-        self = self.drop(self.constantcol(), axis = 1) # remove constant variable 
-    scores = [z_score,iqr_score,mad_score]
-    keys = ['z_score','iqr_score','mad_score']
-    return dict((key,self.apply(func)) for key,func in zip(keys,scores)) 
+        df = df.drop(df.constantcol(), axis = 1) # remove constant variable 
+    df_outlier = pd.DataFrame()
+    for col in df:
+        df_temp = outlier_detection_serie_d(df[col],scores,cutoff_zscore,
+            cutoff_iqrscore,cutoff_mad)
+        df_temp.columns = [col + '_' + col_name for col_name in df_temp.columns]
+        df_outlier = pd.concat([df_outlier,df_temp],axis = 1)
+    return df_outlier
+
     
-pd.DataFrame.outliers_detection =  outlier_detection
+pd.DataFrame.outliers_detection_d =  outlier_detection_d
+
+
+def mahalonobis_distance(self,subset = None):
+    df = self[subset]
+    if (df.dtypes == "object").any():
+        raise("There is a non numeric variable in the subset")
+    array_numpy = df.values
+    
 
 #########################################################
 # Global summary and basic cleaning function  
