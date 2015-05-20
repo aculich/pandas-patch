@@ -180,4 +180,5 @@ class TestPandasPatch(unittest.TestCase):
 #unittest.TextTestRunner(verbosity = 1 ).run(suite)
 
 if __name__ == "__main__":
-    unittest.main(exit =  False)
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestPandasPatch)
+    unittest.TextTestRunner(verbosity=2).run(suite)
