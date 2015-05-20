@@ -15,6 +15,7 @@ setup(name='pandas-patch',
       packages=['pandas_patch'],
       test_suite = 'test',
       keywords=['monkey','patch', 'pandas'],
+      zip_safe=False,
       install_requires=[
           'numpy>=1.7.0',
           'pandas>=0.15.0']
