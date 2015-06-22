@@ -54,6 +54,9 @@ def is_compact(df,columns,inf = None,sup = None ):
 	else : 
 		return ((df[column] >= inf) & (df[column] <= sup)).all().all()
 
+def is_many_missing(df, columns, a = 0.9):
+	""" Return True if the proportion of missing values is greater than the parameter p """
+	return df[columns].apply(lambda col : float(pd.isnull(col).sum())/len(df.index) >= a).any()
 
 def is_key(df,columns):
 	""" Returns True if all columns are key (unique values) else False """
@@ -62,6 +65,10 @@ def is_key(df,columns):
 def is_constant(df,columns):
 	""" Return True if all columns are constant columns else False """
 	return df[columns].apply(lambda col : len(col.unique()) == 1).all()
+	
+def has_outlier(df, columns, scores = [z_score,iqr_score,mad_score], cutoff_zscore = 3,cutoff_iqrscore = 2,cutoff_mad = 2):
+	""" Return True if one of the columns has at least one outlier """
+	return df[columns].apply( lambda col : outlier_detection_serie_d(col, scores = scores, cutoff_zscore = cutoff_zscore, cutoff_iqrscore = cutoff_iqrscore, cutoff_mad = cutoff_mad)['is_outlier'].sum() >= 1 ).any()
 
 def is_mixed_uni_str(df):
 	""" Return True if there is str type (byte in python 2.7) and unicode """	
