@@ -11,11 +11,7 @@ False so you can quickly include them into tests against your DataFrame
 #########################################################
 
 import pandas as pd 
-from pandas_patch import * 
 import numpy as np 
-
-
-
 
 #########################################################
 # Custom assert function 
