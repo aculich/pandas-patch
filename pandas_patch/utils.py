@@ -12,7 +12,8 @@ import time
 import pandas as pd 
 import numpy as np
 
-removena_numpy = lambda array: array[~(np.isnan(array))]
+def removena_numpy(array):
+    return array[~(np.isnan(array))]
 
 def common_cols(df1,df2):
     """ Return the intersection of commun columns name """

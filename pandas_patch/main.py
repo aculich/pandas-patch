@@ -788,6 +788,13 @@ pd.DataFrame.clean_df = clean_df
 #########################################################
 
 
+def infertype(self):
+    """ this function will try to infer the dtype of the columns"""
+    return self.apply(lambda x: pd.lib.infer_dtype(x.values))
+
+pd.DataFrame.infertype = infertype
+
+
 def detectkey2(self):
     def helper(x):
         unique_value = set()
