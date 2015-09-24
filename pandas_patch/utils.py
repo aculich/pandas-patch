@@ -2,14 +2,14 @@
 """
 @author: efourrier
 
-Purpose : Create toolbox functions to use for the different pieces of code ot the package 
+Purpose : Create toolbox functions to use for the different pieces of code ot the package
 
 """
 import warnings
 from numpy.random import normal
 from numpy.random import choice
-import time 
-import pandas as pd 
+import time
+import pandas as pd
 import numpy as np
 
 def removena_numpy(array):
@@ -20,14 +20,14 @@ def common_cols(df1,df2):
     return list(set(df1.columns) & set(df2.columns))
 
 def bootstrap_ci(x,n = 300 ,ci = 0.95):
-    """ 
-    this is a function depending on numpy to compute bootstrap percentile 
-    confidence intervalfor the mean of a numpy array 
+    """
+    this is a function depending on numpy to compute bootstrap percentile
+    confidence intervalfor the mean of a numpy array
 
     Arguments
     ---------
-    x : a numpy ndarray 
-    n : the number of boostrap samples 
+    x : a numpy ndarray
+    n : the number of boostrap samples
     ci : the percentage confidence (float) interval in ]0,1[
 
     Return
@@ -37,11 +37,25 @@ def bootstrap_ci(x,n = 300 ,ci = 0.95):
 
     low_per = 100*(1 - ci)/2
     high_per = 100*ci + low_per
-    x = removena_numpy(x) 
+    x = removena_numpy(x)
     bootstrap_samples = choice(a = x,size = (len(x),n),replace = True).mean(axis = 0)
     return np.percentile(bootstrap_samples,[low_per,high_per])
 
+# Distance helpers
 
+def iqr(ndarray):
+    return np.percentile(ndarray,75) - np.percentile(ndarray,25)
+
+def z_score(ndarray):
+    return (ndarray - np.mean(ndarray))/(np.std(ndarray))
+
+# More robust to outliers
+def iqr_score(ndarray):
+    return (ndarray - np.median(ndarray))/(iqr(ndarray))
+
+# median(abs(ndarray -median(ndarray))/0.6745)
+def mad_score(ndarray):
+    return (ndarray - np.median(ndarray))/(np.median(np.absolute(ndarray -np.median(ndarray)))/0.6745)
 
 def clock(func):
     """ decorator to measure the duration of each test of the unittest suite,
@@ -49,7 +63,7 @@ def clock(func):
     def clocked(*args):
         t0 = time.time()
         result = func(*args)
-        elapsed = (time.time() - t0) * 1000 # in ms 
+        elapsed = (time.time() - t0) * 1000 # in ms
         print('elapsed : [{0:0.3f}ms]'.format(elapsed))
         return result
     return clocked
@@ -87,7 +101,7 @@ def get_test_df_complete():
     r = requests.get(zip_to_download)
     zipfile = ZipFile(StringIO(r.content))
     file_csv = zipfile.namelist()[0]
-    # we are using the c parser for speed 
+    # we are using the c parser for speed
     df = pd.read_csv(zipfile.open(file_csv), skiprows =[0], na_values = ['n/a','N/A',''],
      parse_dates = ['issue_d','last_pymnt_d','next_pymnt_d','last_credit_pull_d'] )
     zipfile.close()
@@ -101,22 +115,22 @@ def get_test_df_complete():
     df['bad'] = 1
     index_good = df['loan_status'].isin(['Fully Paid', 'Current','In Grace Period'])
     df.loc[index_good,'bad'] = 0
-    return df 
+    return df
 
 def psi(bench,target,group,print_df = True):
 
-    """ This function return the Population Stability Index, quantifying if the 
+    """ This function return the Population Stability Index, quantifying if the
     distribution is stable between two states.
-    This statistic make sense and works is only working for numeric variables 
+    This statistic make sense and works is only working for numeric variables
     for bench and target.
     Params:
     - bench is a numpy array with the reference variable.
     - target is a numpy array of the new variable.
     - group is the number of group you want consider.
-    """ 
+    """
     labels_q = np.percentile(bench,[(100.0/group)*i for i in range(group + 1)],interpolation = "nearest")
 
-    # This is the right approach when you have not a lot of unique value 
+    # This is the right approach when you have not a lot of unique value
     ben_pct = (pd.cut(bench,bins = np.unique(labels_q),include_lowest = True).value_counts())/len(bench)
     target_pct = (pd.cut(target,bins = np.unique(labels_q),include_lowest = True).value_counts())/len(target)
     target_pct = target_pct.sort_index()# sort the index

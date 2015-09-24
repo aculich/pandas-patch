@@ -6,26 +6,26 @@
 
 Purpose : the puropose of this modest patch is to create some new methods for
 the class Dataframe in order to simplify a data scientist life.
-The module is designed as a monkey patch so just import it before starting your 
+The module is designed as a monkey patch so just import it before starting your
 analysis.
 It is providing multiple simple methods for the class dataframe
 
-run "python -m unittest -v test" in the module directory to run the tests 
+run "python -m unittest -v test" in the module directory to run the tests
 
 Note : don't use inplace = True on self when you are doing monkey patching,
 it is dangerous.
- 
+
 """
 #########################################################
-# Import modules 
+# Import modules
 #########################################################
 
 import pandas as pd
-import numpy as np 
+import numpy as np
 from pandas import DataFrame
 from numpy.random import permutation
-from numpy.random import choice 
-from .utils import bootstrap_ci
+from numpy.random import choice
+from .utils import *
 
 # bug of 0.16 verison
 
@@ -34,23 +34,23 @@ from .utils import bootstrap_ci
 
 
 #########################################################
-# Private Helpers 
+# Private Helpers
 #########################################################
 
 
 
 # Find a better way to do it ( core pandas implementation)
-# cserie return the column name with bool = True for a Serie of boolean 
+# cserie return the column name with bool = True for a Serie of boolean
 def cserie(serie):
     return serie[serie].index.tolist()
 
-    
+
 #########################################################
-# Data cleaning and exploration helpers 
+# Data cleaning and exploration helpers
 #########################################################
 
 
-# Helpers 
+# Helpers
 
 def sample_df(self,pct = 0.05,nr = 10,threshold = None):
     """ sample a number of rows of a dataframe = min(max(0.05*nrow(self,nr),threshold)"""
@@ -60,7 +60,7 @@ def sample_df(self,pct = 0.05,nr = 10,threshold = None):
     return self.loc[permutation(self.index)[:a]]
 
 pd.DataFrame.sample_df = sample_df
-    
+
 def nrow(self):
     """ return the number of rows
         This is faster than self.shape[0] """
@@ -75,17 +75,17 @@ def ncol(self):
 pd.DataFrame.ncol = ncol
 
 def dfnum(self,index = False):
-    """ Return columns with numeric type, the output is a list of columns if index 
+    """ Return columns with numeric type, the output is a list of columns if index
     = False else a pandas Series of booleans  """
     if index :
         return (self.dtypes == float)|(self.dtypes == int)
     else :
         return cserie((self.dtypes == float)|(self.dtypes == int))
 
-pd.DataFrame.dfnum = dfnum 
+pd.DataFrame.dfnum = dfnum
 
 def dfchar(self,index = False):
-    """ Return columns with numeric type, the output is a list of columns if index 
+    """ Return columns with numeric type, the output is a list of columns if index
      = True else a pandas Series of booleans """
     if index :
         return self.dtypes == object
@@ -96,15 +96,15 @@ pd.DataFrame.dfchar = dfchar
 
 
 def factors(self,nb_max_levels = 10,threshold_value = None, index = False):
-    """ return a list of the detected factor variable, detection is based on 
+    """ return a list of the detected factor variable, detection is based on
     ther percentage of unicity perc_unique = 0.05 by default.
-    We follow here the definition of R factors variable considering that a 
+    We follow here the definition of R factors variable considering that a
     factor variable is a character variable that take value in a list a levels
 
-    this is a bad implementation 
+    this is a bad implementation
 
 
-    Arguments 
+    Arguments
     ----------
     nb_max_levels: the mac nb of levels you fix for a categorical variable
     threshold_value : the nb of of unique value in percentage of the dataframe length
@@ -126,7 +126,7 @@ def factors(self,nb_max_levels = 10,threshold_value = None, index = False):
                 else:
                     unique_value.add(e)
             return True
-    
+
 
     if index:
         return self.apply(lambda x:  helper_factor(x))
@@ -151,13 +151,13 @@ def nacount(self,axis = 0):
         Serie = self.isnull().sum(axis = 1)
         df =  DataFrame(Serie,columns = ['Nanumber'])
         df['Napercentage'] = df['Nanumber']/(self.ncol())
-    return df 
+    return df
 
 pd.DataFrame.nacount = nacount
 
 
 def manymissing(self,a=0.9,axis = 0):
-    """ identify columns of a dataframe with many missing values ( >= a), if 
+    """ identify columns of a dataframe with many missing values ( >= a), if
     axis = 1 row either
     - the output is a pandas index """
     if axis == 0:
@@ -165,15 +165,15 @@ def manymissing(self,a=0.9,axis = 0):
     if axis == 1:
         self = self.nacount(axis = 1)
     return self[self['Napercentage'] >= a].index
-    
+
 pd.DataFrame.manymissing = manymissing
 
 def constantcol(self,dropna = True,**kwargs):
     """ identify constant columns """
-    # sample to reduce computation time 
+    # sample to reduce computation time
     def helper_cc(x):
         l_unique = x.nunique()
-        return (l_unique == 1 or l_unique == 0) 
+        return (l_unique == 1 or l_unique == 0)
     if dropna:
         col_to_keep = self.sample_df(**kwargs).apply(lambda x: helper_cc(x),axis = 0 )
         if len(cserie(col_to_keep)) == 0:
@@ -185,7 +185,7 @@ def constantcol(self,dropna = True,**kwargs):
             return []
         return cserie(self.loc[:,col_to_keep].apply(lambda x: len(x.unique()) == 1 ,axis = 0 ))
 
-    
+
 pd.DataFrame.constantcol = constantcol
 
 
@@ -196,9 +196,9 @@ def count_unique(self):
 pd.DataFrame.count_unique = count_unique
 
 def detectkey(self, index_format = False, pct = 0.15,dropna = False,**kwargs):
-    """ identify id or key columns as an index if index_format = True or 
+    """ identify id or key columns as an index if index_format = True or
     as a list if index_format = False """
-    
+
 
     if not dropna:
         col_to_keep = self.sample_df(pct = pct,**kwargs).apply(lambda x: len(x.unique()) == len(x) ,axis = 0)
@@ -222,16 +222,16 @@ def detectkey(self, index_format = False, pct = 0.15,dropna = False,**kwargs):
             return cserie(is_key_index)
 
 
-    
+
 pd.DataFrame.detectkey = detectkey
 
 
 
 def structure(self,threshold_factor = 10):
-    """ this function return a summary of the structure of the pandas DataFrame 
-    data looking at the type of variables, the number of missing values, the 
+    """ this function return a summary of the structure of the pandas DataFrame
+    data looking at the type of variables, the number of missing values, the
     number of unique values """
-    
+
     dtypes = self.dtypes
     nacolcount = self.nacount(axis = 0)
     nb_missing = nacolcount.Nanumber
@@ -267,7 +267,7 @@ def findupcol(self,threshold = 100,**kwargs):
 
     df_s = self.sample_df(threshold = 100,**kwargs).T
     dup_index_s = (df_s.duplicated()) | (df_s.duplicated(take_last = True))
-    
+
     if len(cserie(dup_index_s)) == 0:
         return []
 
@@ -286,21 +286,21 @@ pd.DataFrame.findupcol = findupcol
 
 def finduprow(self,subset = []):
     """ find duplicated rows and return the result a sorted dataframe of all the
-    duplicates 
+    duplicates
     subset is a list of columns to look for duplicates from this specific subset . """
     if subset:
-        dup_index = (self.duplicated(subset = subset)) | (self.duplicated(subset = subset,take_last =True)) 
-    else :    
+        dup_index = (self.duplicated(subset = subset)) | (self.duplicated(subset = subset,take_last =True))
+    else :
         dup_index = (self.duplicated()) | (self.duplicated(take_last = True))
-        
+
     if subset :
         return self[dup_index].sort(subset)
     else :
         return self[dup_index].sort(self.columns[0])
 
 pd.DataFrame.finduprow = finduprow
-    
-    
+
+
 def filterdupcol(self):
     """ return a dataframe without duplicated columns """
     return self.drop(self.columns[self.T.duplicated()], axis =1)
@@ -317,16 +317,16 @@ def serie_quantiles(array,nb_quantiles = 10):
         raise("the type of your array is not supported")
 
 def dfquantiles(self,nb_quantiles = 10,only_numeric = True):
-    """ this function gives you a all the quantiles 
+    """ this function gives you a all the quantiles
     of the numeric variables of the dataframe
-    only_numeric will calculate it only for numeric variables, 
-    for only_numeric = False you will get NaN value for non numeric 
+    only_numeric will calculate it only for numeric variables,
+    for only_numeric = False you will get NaN value for non numeric
     variables """
     binq = 1.0/nb_quantiles
     if only_numeric:
         self = self[self.dfnum()]
     return self.quantile([binq*i for i in xrange(nb_quantiles +1)])
-    
+
 pd.DataFrame.dfquantiles = dfquantiles
 
 # def is_date(self,exclude_numver):
@@ -335,28 +335,28 @@ pd.DataFrame.dfquantiles = dfquantiles
 #     for col in self.columns:
 #         try :
 #              d[col] = False
-#              # i loop trough non missing value 
-#              # this try-except loop is bad programming 
+#              # i loop trough non missing value
+#              # this try-except loop is bad programming
 #              l = [parse(e) for e in self.loc[pd.notnull(self[col]),col]]
 #              len_not_na = self[pd.notnull(self[col])].nrow()
-#              if len(l) == len_not_na and len_not_na > 0 :          
+#              if len(l) == len_not_na and len_not_na > 0 :
 #                  d[col] = True
-#         except : 
-#             continue 
+#         except :
+#             continue
 #     return pd.Series(d)
-            
-# pd.DataFrame.is_date = is_date            
+
+# pd.DataFrame.is_date = is_date
 
 
 
 
 def nearzerovar(self, freq_cut = 95/5, unique_cut = 10, save_metrics = False):
-    """ identify predictors with near-zero variance. 
-            freq_cut: cutoff ratio of frequency of most common value to second 
+    """ identify predictors with near-zero variance.
+            freq_cut: cutoff ratio of frequency of most common value to second
             most common value.
-            unique_cut: cutoff percentage of unique value over total number of 
+            unique_cut: cutoff percentage of unique value over total number of
             samples.
-            save_metrics: if False, print dataframe and return NON near-zero var 
+            save_metrics: if False, print dataframe and return NON near-zero var
             col indexes, if True, returns the whole dataframe.
     """
     nb_unique_values = self.count_unique()
@@ -368,29 +368,29 @@ def nearzerovar(self, freq_cut = 95/5, unique_cut = 10, save_metrics = False):
         elif nb_unique_values[x.name] == 1:
             return 1.0
         else:
-            return float(x.value_counts().iloc[0])/x.value_counts().iloc[1] 
+            return float(x.value_counts().iloc[0])/x.value_counts().iloc[1]
 
     freq_ratio = self.apply(helper_freq)
 
-    zerovar = (nb_unique_values == 0) | (nb_unique_values == 1) 
+    zerovar = (nb_unique_values == 0) | (nb_unique_values == 1)
     nzv = ((freq_ratio >= freq_cut) & (percent_unique <= unique_cut)) | (zerovar)
 
     if save_metrics:
         return pd.DataFrame({'percent_unique': percent_unique, 'freq_ratio': freq_ratio, 'zero_var': zerovar, 'nzv': nzv}, index=self.columns)
     else:
         print(pd.DataFrame({'percent_unique': percent_unique, 'freq_ratio': freq_ratio, 'zero_var': zerovar, 'nzv': nzv}, index=self.columns))
-        return nzv[nzv == True].index 
+        return nzv[nzv == True].index
 
 pd.DataFrame.nearzerovar = nearzerovar
 
 
 def findcorr(self, cutoff=.90, method='pearson', data_frame=False, printcor = False):
     """
-        implementation of the Recursive Pairwise Elimination.        
-        The function finds the highest correlated pair and removes the most 
-        highly correlated feature of the pair, then repeats the process 
+        implementation of the Recursive Pairwise Elimination.
+        The function finds the highest correlated pair and removes the most
+        highly correlated feature of the pair, then repeats the process
         until the threshold 'cutoff' is reached.
-        
+
         will return a dataframe is 'data_frame' is set to True, and the list
         of predictors to remove otherwise.
 
@@ -400,14 +400,14 @@ def findcorr(self, cutoff=.90, method='pearson', data_frame=False, printcor = Fa
     cor = self.corr(method=method)
     for col in cor.columns:
         cor[col][col] = 0
-    
+
     max_cor = cor.max()
     if printcor:
         print(max_cor.max())
-    while max_cor.max() > cutoff:            
+    while max_cor.max() > cutoff:
         A = max_cor.idxmax()
         B = cor[A].idxmax()
-        
+
         if cor[A].mean() > cor[B].mean():
             cor.drop(A, 1, inplace = True)
             cor.drop(A, 0, inplace = True)
@@ -416,11 +416,11 @@ def findcorr(self, cutoff=.90, method='pearson', data_frame=False, printcor = Fa
             cor.drop(B, 1, inplace = True)
             cor.drop(B, 0, inplace = True)
             res += [B]
-        
+
         max_cor = cor.max()
         if printcor:
             print(max_cor.max())
-        
+
     if data_frame:
         return self.drop(res, 1)
     else:
@@ -429,10 +429,10 @@ def findcorr(self, cutoff=.90, method='pearson', data_frame=False, printcor = Fa
 pd.DataFrame.findcorr = findcorr
 
 #########################################################
-# Data basic summary helpers 
+# Data basic summary helpers
 #########################################################
 
-       
+
 def detailledsummary(self):
     """ provide a more complete sumary than describe, it is using only numeric
     value """
@@ -443,7 +443,7 @@ def detailledsummary(self):
     return DataFrame(results,index=['Count','Min','FirstQuartile',
     'Median','Mean','Std','Mad','Skewness',
     'Kurtosis','Thirdquartile','Max']).T
-                                      
+
 pd.DataFrame.detailledsummary = detailledsummary
 
 
@@ -455,7 +455,7 @@ pd.DataFrame.detailledsummary = detailledsummary
 # Helpers for groupsummary function
 def se(x):
     return x.std() / np.sqrt(len(x))
-    # creating the list of functions 
+    # creating the list of functions
 def quantile_25(x):
     return x.quantile(0.25)
 def quantile_75(x):
@@ -468,7 +468,7 @@ def kurtosis(x):
 # Be careful all groupsummary return a dataframe with a MultiIndex structure
 
 def groupsummarys(self,groupvar,measurevar):
-    """ provide a summary of measurevar groupby groupvar. measurevar and 
+    """ provide a summary of measurevar groupby groupvar. measurevar and
     groupvar are list of column names. this function is optimized for speed """
     functions = ['count','min','mean','median','std','sem','max']
     return self.groupby(groupvar)[measurevar].agg(functions)
@@ -485,7 +485,7 @@ def groupsummaryd(self,groupvar,measurevar):
 pd.DataFrame.groupsummaryd = groupsummaryd
 
 
-# def groupsummarysc(self,groupvar,measurevar,confint=0.95,cut = False, 
+# def groupsummarysc(self,groupvar,measurevar,confint=0.95,cut = False,
 #     quantile = 5,is_bucket = False,**kwargs):
 #     """ provide a summary of measurevar groupby groupvar with student conf interval.
 #     measurevar and groupvar are list of column names
@@ -499,7 +499,7 @@ pd.DataFrame.groupsummaryd = groupsummaryd
 #         for var in groupvar:
 #             if is_bucket:
 #                 df[var] = pd.cut(df[var],bins = quantile)
-#             else: 
+#             else:
 #                 df[var] = pd.qcut(df[var],q = quantile)
 #     return df.groupby(groupvar)[measurevar].agg(functions)
 
@@ -509,7 +509,7 @@ pd.DataFrame.groupsummaryd = groupsummaryd
 def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
                    cut = False, quantile = 5,is_bucket = False, **kwargs):
     """ provide a summary of measurevar groupby groupvar with bootstrap conf interval.
-    measurevar and groupvar are list of column names. You have a cut functionnality 
+    measurevar and groupvar are list of column names. You have a cut functionnality
     if you want to cut the groupvar
     if you want bucket of equal length instead of quantile put is_bucket = True """
     ci_low = lambda x : bootstrap_ci(x.values,n = nsamples,ci = confint)[0]
@@ -522,12 +522,12 @@ def groupsummarybc(self,groupvar,measurevar,confint=0.95,nsamples = 500,
             for var in groupvar:
                 if is_bucket:
                     df[var] = pd.cut(df[var],bins = quantile)
-                else: 
+                else:
                     df[var] = pd.qcut(df[var],q = quantile)
         elif isinstance(groupvar,str):
                 if is_bucket:
                     df[groupvar] = pd.cut(df[groupvar],bins = quantile)
-                else: 
+                else:
                     df[groupvar] = pd.qcut(df[groupvar],q = quantile)
         else:
             raise('groupvar is neither a string or a list please correct the type')
@@ -542,28 +542,28 @@ pd.DataFrame.groupsummarybc = groupsummarybc
 #                    cut = False, quantile = 5,is_bucket = False,**kwargs):
 #     """ provide a more complete summary than groupsummarysc of measurevar
 #     groupby groupvar with student conf interval.measurevar and groupvar
-#     are list of column names 
+#     are list of column names
 #     if you want bucket of equal length instead of quantile put is_bucket = True """
 #     def student_ci(x):
 #         return se(x) * scipy.stats.t.interval(confint, len(x) - 1,**kwargs)[1]
 #     self = self.copy()
 #     functions = ['count','min', quantile_25,'mean',se,student_ci,
 #     'median','std','mad',skewness ,kurtosis,quantile_75,'max']
-#     # Correct the problem of unicity 
+#     # Correct the problem of unicity
 #     if cut:
 #         for var in groupvar:
 #             if is_bucket:
 #                 self.loc[:,var] = pd.cut(self.loc[:,var],bins = quantile)
-#             else: 
+#             else:
 #                 self.loc[:,var] = pd.qcut(self.loc[:,var],q = quantile)
-            
-#     # grouping, apply function and return results 
+
+#     # grouping, apply function and return results
 #     return self.groupby(groupvar)[measurevar].agg(functions)
-    
+
 # pd.DataFrame.groupsummaryscc = groupsummaryscc
 
 
-# This is the global function that the user will be using 
+# This is the global function that the user will be using
 # def groupsummary(self,groupvar,measurevar,confint=0.95,fast_summary =False,
 #                 detailled_summary = False,boostrap = False,
 #                    cut = False, quantile = 5,is_bucket = False,group_keys = False,**kwargs):
@@ -576,14 +576,14 @@ pd.DataFrame.groupsummarybc = groupsummarybc
 #     if boostrap:
 #         return self.groupsummarybc(groupvar,measurevar,confint,nsamples,
 #                    cut, quantile,is_bucket, **kwargs)
-#     return self.groupsummarysc(groupvar,measurevar,confint,cut, 
+#     return self.groupsummarysc(groupvar,measurevar,confint,cut,
 #     quantile,is_bucket ,**kwargs)
 
 
 # pd.DataFrame.groupsummary = groupsummary
 
 def group_average(self,groupvar,measurevar,avg_weight):
-    """ return an weighted ( the weight are given by avg_weight) mean 
+    """ return an weighted ( the weight are given by avg_weight) mean
     of the variable measurevar group by groupvar """
     get_wavg = lambda df: np.average(a = df[measurevar], weights = df[avg_weight], axis = 0 )
     return self.groupby(groupvar).apply(get_wavg)
@@ -593,40 +593,28 @@ pd.DataFrame.group_average = group_average
 
 
 #########################################################
-# Simple outlier detection based on distance 
+# Simple outlier detection based on distance
 #########################################################
 
-# Computing Distance Score 
+# Computing Distance Score
 
-# We don't take the absolute value of the score by choice 
+# We don't take the absolute value of the score by choice
 
-# We let numpy take care of inf when std = 0 or iqr = 0 
+# We let numpy take care of inf when std = 0 or iqr = 0
 
-def iqr(ndarray):
-    return np.percentile(ndarray,75) - np.percentile(ndarray,25)
 
-def z_score(ndarray):
-    return (ndarray - np.mean(ndarray))/(np.std(ndarray))
-
-# More robust to outliers 
-def iqr_score(ndarray):
-    return (ndarray - np.median(ndarray))/(iqr(ndarray))
-
-# median(abs(ndarray -median(ndarray))/0.6745)
-def mad_score(ndarray):
-    return (ndarray - np.median(ndarray))/(np.median(np.absolute(ndarray -np.median(ndarray)))/0.6745)
 
 def fivenum(v):
-    """ Returns Tukey's five number summary 
+    """ Returns Tukey's five number summary
     (minimum, lower-hinge, median, upper-hinge, maximum)
-    for the input vector, a list or array of numbers 
+    for the input vector, a list or array of numbers
     based on 1.5 times the interquartile distance """
     md = np.median(v)
     whisker = 1.5*iqr(v)
     return min(v), md-whisker, md, md+whisker, max(v)
 
 def check_negative_value_serie(serie):
-    """ this function will detect if there is negative value and calculate the 
+    """ this function will detect if there is negative value and calculate the
     ratio negative value/postive value
     """
     if serie.dtype == "object":
@@ -648,19 +636,19 @@ def outlier_detection_serie_d(serie,scores = [z_score,iqr_score,mad_score],
         df.loc[np.absolute(df['iqr_score']) >= cutoff_iqrscore,'is_outlier'] = 1
     if 'mad_score' in keys :
         df.loc[np.absolute(df['mad_score']) >= cutoff_mad,'is_outlier'] = 1
-    return df 
+    return df
 
 def outlier_detection_d(self,subset = None,remove_constant_col = True,
                     scores = [z_score,iqr_score,mad_score],
                       cutoff_zscore = 3,cutoff_iqrscore = 2,cutoff_mad = 2):
-    """ Return a dictionnary with z_score,iqr_score,mad_score as keys and the 
+    """ Return a dictionnary with z_score,iqr_score,mad_score as keys and the
     associate dataframe of distance as value of the dictionnnary"""
     df = self.copy()
     if subset:
         df = df.drop(subset,axis = 1)
-    df = df[df.dfnum()] # take only numeric variable 
+    df = df[df.dfnum()] # take only numeric variable
     if remove_constant_col:
-        df = df.drop(df.constantcol(), axis = 1) # remove constant variable 
+        df = df.drop(df.constantcol(), axis = 1) # remove constant variable
     df_outlier = pd.DataFrame()
     for col in df:
         df_temp = outlier_detection_serie_d(df[col],scores,cutoff_zscore,
@@ -669,7 +657,7 @@ def outlier_detection_d(self,subset = None,remove_constant_col = True,
         df_outlier = pd.concat([df_outlier,df_temp],axis = 1)
     return df_outlier
 
-    
+
 pd.DataFrame.outliers_detection_d =  outlier_detection_d
 
 
@@ -678,25 +666,25 @@ def mahalonobis_distance(self,subset = None):
     if (df.dtypes == "object").any():
         raise("There is a non numeric variable in the subset")
     array_numpy = df.values
-    
+
 
 #########################################################
-# Global summary and basic cleaning function  
+# Global summary and basic cleaning function
 #########################################################
 
 def psummary(self,manymissing_ph = 0.70,manymissing_pl = 0.05,nzv_freq_cut = 95/5, nzv_unique_cut = 10,
 threshold = 100,string_threshold = 40, dynamic = False):
-    """ 
-    This function will print you a summary of the dataset, based on function 
+    """
+    This function will print you a summary of the dataset, based on function
     designed is this package
 
     Arguments
     ---------
     manymissing_ph : sup cutoff to detect columns with manymissing values
-    manymissing_ph : inf cutoff to detect columns with few missing values 
-    zv_freq_cut : 
-    nzv_unique_cut : 
-    threshold : threshold for sampling to improve performance 
+    manymissing_ph : inf cutoff to detect columns with few missing values
+    zv_freq_cut :
+    nzv_unique_cut :
+    threshold : threshold for sampling to improve performance
     string_threshold : threshold for the length of string of character columns to detect big strings
     dynamic : dynamic printing (print one element by one, useful for big dataset)
 
@@ -737,7 +725,7 @@ threshold = 100,string_threshold = 40, dynamic = False):
                     'nearzerovar_columns' : cserie(self.nearzerovar(nzv_freq_cut,nzv_unique_cut,save_metrics =True).nzv),
                     'high_correlated_col' : self.findcorr(data_frame = False),
                     'big_strings_col': cserie(self.df_len_string() > string_threshold)
-                    } 
+                    }
 
         string_info = u"""
 there are {nb_duplicated_rows} duplicated rows\n
@@ -758,8 +746,8 @@ these columns contains big strings :\n{big_strings_col}\n
 pd.DataFrame.psummary = psummary
 
 def clean_df(self,manymissing_p = 0.9,drop_col = None,filter_constantcol = True):
-    """ 
-    Basic cleaning of the data by deleting manymissing columns, 
+    """
+    Basic cleaning of the data by deleting manymissing columns,
     constantcol and drop_col specified by the user
 
     """
@@ -777,14 +765,14 @@ def clean_df(self,manymissing_p = 0.9,drop_col = None,filter_constantcol = True)
     return self.drop(pd.unique(col_to_remove),axis = 1)
 
 
-pd.DataFrame.clean_df = clean_df   
-        
+pd.DataFrame.clean_df = clean_df
+
 #########################################################
-# Time Series Analysis 
+# Time Series Analysis
 #########################################################
 
 #########################################################
-# Unclassified 
+# Unclassified
 #########################################################
 
 
