@@ -14,7 +14,8 @@ The clock decorator in utils will measure the run time of the test
 #########################################################
 
 import unittest
-import pandas_patch.main
+from pandas_patch.main import *
+from pandas_patch.htest import *
 from pandas_patch.main import pd
 
 
@@ -30,7 +31,7 @@ cserie = lambda serie: list(serie[serie].index)
 # Writing the tests  
 #########################################################
 
-class TestPandasPatch(unittest.TestCase):
+class TestPandasPatchMain(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -167,6 +168,47 @@ class TestPandasPatch(unittest.TestCase):
         self.assertIn('na_col',cserie(nearzerovar.nzv))
 
 
+class TestPandasPatchHtest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        """ creating test data set for the test module """
+        cls._test_df = create_test_df()
+
+    @clock
+    def test_is_na(self):
+        self.assertTrue(isna(self._test_df))
+        self.assertTrue(isna(self._test_df,['na_col']))
+        self.assertTrue(isna(self._test_df,['many_missing_70']))
+        self.assertFalse(isna(self._test_df,['id']))
+
+    @clock
+    def test_is_nacolumns(self):
+        self.assertTrue(is_nacolumns(self._test_df,['na_col']))
+        self.assertFalse(is_nacolumns(self._test_df,['many_missing_70']))
+        self.assertTrue(is_nacolumns(self._test_df,['na_col','many_missing_70']))
+
+    @clock
+    def test_is_positive(self):
+        self.assertTrue(is_positive(self._test_df,['num_variable']))
+        self.assertFalse(is_positive(self._test_df,['character_factor']))
+        self.assertFalse(is_positive(self._test_df,['negative_variable','num_variable']))
+
+    @clock
+    def test_is_key(self):
+        self.assertTrue(is_key(self._test_df,['id']))
+        self.assertFalse(is_key(self._test_df,['constant_col']))
+        self.assertFalse(is_key(self._test_df,['negative_variable','num_variable']))
+    @clock
+    def test_is_constant(self):
+        self.assertTrue(is_constant(self._test_df,['constant_col']))
+        self.assertTrue(is_constant(self._test_df,['constant_col_num']))
+        self.assertFalse(is_constant(self._test_df,['binary_variable']))
+        self.assertFalse(is_constant(self._test_df,['negative_variable','constant_col']))
+
+
+
+
 
 
 # Adding new tests sets 
@@ -180,5 +222,5 @@ class TestPandasPatch(unittest.TestCase):
 #unittest.TextTestRunner(verbosity = 1 ).run(suite)
 
 if __name__ == "__main__":
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestPandasPatch)
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestPandasPatchMain)
     unittest.TextTestRunner(verbosity=2).run(suite)
